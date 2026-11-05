@@ -1,95 +1,49 @@
-# Auto generated files
-[Dd]ebug/
-[Rr]elease/
-build/*
-*.slo
-*.lo
-*.o
-*.obj
-*.suo
-*.tlog
-*.ilk
-*.log
-*.pdb
-*.idb
-*.iobj
-*.ipdb
-*.opensdf
-*.sdf
-
-# Compiled Dynamic libraries
+# Binaries
+/forge
+/tradeforge-server
+/bin/
+/build/
+*.exe
+*.exe~
+*.dll
 *.so
 *.dylib
-*.dll
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
-*.exe
+*.test
 *.out
-*.app
 
-# Codelite
-.codelite
+# Go workspace and tooling
+go.work
+go.work.sum
 
-# KDevelop
-*.kdev4
+# Test and coverage output
+*.cover
+*.coverprofile
+coverage.out
+coverage.html
+/tests/logs/
+/testdata/tmp/
 
-# .orig files
-*.orig
+# Logs
+*.log
+logs/
 
-# example  files
-example/*
-!example/example.cpp
-!example/bench.cpp
-!example/utils.h
-!example/Makefile*
-!example/example.sln
-!example/example.vcxproj
-!example/CMakeLists.txt
-!example/meson.build
-!example/multisink.cpp
-!example/jni
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+*.local
 
-# generated files
-generated
-version.rc
-
-# Cmake
-CMakeCache.txt
-CMakeFiles
-CMakeScripts
-Makefile
-cmake_install.cmake
-install_manifest.txt
-/tests/tests.VC.VC.opendb
-/tests/tests.VC.db
-/tests/tests
-/tests/logs/*
-spdlogConfig.cmake
-spdlogConfigVersion.cmake
-compile_commands.json
-
-# idea
-.idea/
-.cache/
-.vscode/
-cmake-build-*/
+# Local data
 *.db
-*.ipch
-*.filters
 *.db-wal
-*.opendb
 *.db-shm
-*.vcxproj
-*.tcl
-*.user
-*.sln
 
-# macos
-*.DS_store
-*.xcodeproj/
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*.iml
+
+# macOS
+.DS_Store
