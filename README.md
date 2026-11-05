@@ -2,7 +2,7 @@
 
 TradeForge 是一个用 Go 编写的**模拟交易系统**，用于练习高并发、gRPC、事件驱动和交易系统设计。系统支持 CLI 高并发登录、下单、撤单、查询，以及订单/策略状态和行情的实时订阅，并提供 Web 管理端。
 
-> 当前状态：**设计阶段**，代码尚未实现。需求与技术方案见 [PR-TD.doc.md](./PR-TD.doc.md)，进度与决策见 [dev_ledger.md](./dev_ledger.md)。
+> 当前状态：**P0 骨架进行中**，`tradeforge.v1` proto 契约已建立，服务端与 CLI 待实现。需求与技术方案见 [PR-TD.doc.md](./PR-TD.doc.md)，进度与决策见 [dev_ledger.md](./dev_ledger.md)。
 
 ## 命名体系
 
@@ -59,6 +59,17 @@ docker compose -f deploy/docker-compose.yml up -d
 forge login --user alice
 forge order submit --symbol AAPL --side BUY --type LIMIT --price 100 --qty 10
 forge sub orders
+```
+
+## 开发
+
+需要 Go 1.22+、buf 与 Docker（数据库）。
+
+```bash
+make proto    # buf lint + 生成 gRPC/gateway/OpenAPI 代码
+make build    # 编译所有 Go 包
+make test     # 运行测试
+make help     # 查看全部命令
 ```
 
 ## 技术栈

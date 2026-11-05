@@ -1,0 +1,213 @@
+syntax = "proto3";
+
+package tradeforge.v1;
+
+import "google/api/annotations.proto";
+import "tradeforge/v1/common.proto";
+
+option go_package = "github.com/viviwu/tradeforge/gen/tradeforge/v1;tradeforgev1";
+
+// Order is the persisted view of an order.
+message Order {
+  string order_id = 1;
+  string client_order_id = 2;
+  string account_id = 3;
+  string symbol = 4;
+  Side side = 5;
+  OrderType type = 6;
+  TimeInForce time_in_force = 7;
+  int64 price = 8;
+  int64 quantity = 9;
+  int64 filled_qty = 10;
+  int64 avg_price = 11;
+  OrderStatus status = 12;
+  string reject_reason = 13;
+  int64 created_at_unix_nano = 14;
+  int64 updated_at_unix_nano = 15;
+}
+
+// Trade is a single execution.
+message Trade {
+  string trade_id = 1;
+  uint64 trade_seq = 2;
+  string order_id = 3;
+  string account_id = 4;
+  string symbol = 5;
+  Side side = 6;
+  int64 price = 7;
+  int64 quantity = 8;
+  int64 created_at_unix_nano = 9;
+}
+
+// Position is the current holding for an account and symbol.
+message Position {
+  string account_id = 1;
+  string symbol = 2;
+  int64 quantity = 3;
+  int64 avg_price = 4;
+  int64 frozen_qty = 5;
+  int64 market_price = 6;
+  int64 unrealized_pnl = 7;
+  int64 updated_at_unix_nano = 8;
+}
+
+// Strategy is the lightweight strategy state record.
+message Strategy {
+  string strategy_id = 1;
+  string account_id = 2;
+  string name = 3;
+  StrategyStatus status = 4;
+  string params_json = 5;
+  int64 created_at_unix_nano = 6;
+  int64 updated_at_unix_nano = 7;
+}
+
+// SubmitOrderRequest submits a new order.
+message SubmitOrderRequest {
+  // request_id is used for tracing and must be unique per call.
+  string request_id = 1;
+  // client_order_id is the idempotency key scoped to the account.
+  string client_order_id = 2;
+  string symbol = 3;
+  Side side = 4;
+  OrderType type = 5;
+  TimeInForce time_in_force = 6;
+  // price is in the minimum unit of the quote currency; ignored for market orders.
+  int64 price = 7;
+  int64 quantity = 8;
+}
+
+// SubmitOrderResponse is the synchronous acknowledgement of a submission.
+message SubmitOrderResponse {
+  string order_id = 1;
+  string client_order_id = 2;
+  OrderStatus status = 3;
+  string reject_reason = 4;
+}
+
+// CancelOrderRequest cancels an order by order_id or client_order_id.
+message CancelOrderRequest {
+  string request_id = 1;
+  string order_id = 2;
+  string client_order_id = 3;
+}
+
+// CancelOrderResponse is the result of a cancellation.
+message CancelOrderResponse {
+  string order_id = 1;
+  OrderStatus status = 2;
+  int64 canceled_qty = 3;
+  string reason = 4;
+}
+
+// GetOrdersRequest queries orders with filters and pagination.
+message GetOrdersRequest {
+  string request_id = 1;
+  uint32 page_size = 2;
+  string page_token = 3;
+  OrderStatus status = 4;
+  string symbol = 5;
+  string order_id = 6;
+  string client_order_id = 7;
+  int64 from_unix_nano = 8;
+  int64 to_unix_nano = 9;
+}
+
+// GetOrdersResponse is a page of orders.
+message GetOrdersResponse {
+  repeated Order orders = 1;
+  string next_page_token = 2;
+}
+
+// GetTradesRequest queries executions with filters and pagination.
+message GetTradesRequest {
+  string request_id = 1;
+  uint32 page_size = 2;
+  string page_token = 3;
+  string order_id = 4;
+  string symbol = 5;
+  int64 from_unix_nano = 6;
+  int64 to_unix_nano = 7;
+}
+
+// GetTradesResponse is a page of trades.
+message GetTradesResponse {
+  repeated Trade trades = 1;
+  string next_page_token = 2;
+}
+
+// GetPositionsRequest queries positions for the calling account.
+message GetPositionsRequest {
+  string request_id = 1;
+  // account_id is only honored for admin callers.
+  string account_id = 2;
+  string symbol = 3;
+}
+
+// GetPositionsResponse is the position list.
+message GetPositionsResponse {
+  repeated Position positions = 1;
+}
+
+// GetStrategiesRequest queries strategy state.
+message GetStrategiesRequest {
+  string request_id = 1;
+  // account_id is only honored for admin callers.
+  string account_id = 2;
+  StrategyStatus status = 3;
+  uint32 page_size = 4;
+  string page_token = 5;
+}
+
+// GetStrategiesResponse is a page of strategies.
+message GetStrategiesResponse {
+  repeated Strategy strategies = 1;
+  string next_page_token = 2;
+}
+
+// TradeService exposes order, trade, position, and strategy queries.
+service TradeService {
+  // SubmitOrder submits a limit or market order.
+  rpc SubmitOrder(SubmitOrderRequest) returns (SubmitOrderResponse) {
+    option (google.api.http) = {
+      post: "/v1/orders"
+      body: "*"
+    };
+  }
+
+  // CancelOrder cancels an active order.
+  rpc CancelOrder(CancelOrderRequest) returns (CancelOrderResponse) {
+    option (google.api.http) = {
+      post: "/v1/orders:cancel"
+      body: "*"
+    };
+  }
+
+  // GetOrders lists orders for the calling account.
+  rpc GetOrders(GetOrdersRequest) returns (GetOrdersResponse) {
+    option (google.api.http) = {
+      get: "/v1/orders"
+    };
+  }
+
+  // GetTrades lists executions for the calling account.
+  rpc GetTrades(GetTradesRequest) returns (GetTradesResponse) {
+    option (google.api.http) = {
+      get: "/v1/trades"
+    };
+  }
+
+  // GetPositions lists positions for the calling account.
+  rpc GetPositions(GetPositionsRequest) returns (GetPositionsResponse) {
+    option (google.api.http) = {
+      get: "/v1/positions"
+    };
+  }
+
+  // GetStrategies lists strategies visible to the caller.
+  rpc GetStrategies(GetStrategiesRequest) returns (GetStrategiesResponse) {
+    option (google.api.http) = {
+      get: "/v1/strategies"
+    };
+  }
+}

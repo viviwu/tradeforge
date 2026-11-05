@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package tradeforge.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+option go_package = "github.com/viviwu/tradeforge/gen/tradeforge/v1;tradeforgev1";
+
+// User is the authenticated principal.
+message User {
+  string user_id = 1;
+  string username = 2;
+  string role = 3;
+}
+
+// LoginRequest authenticates a user with username and password.
+message LoginRequest {
+  string username = 1;
+  string password = 2;
+  string request_id = 3;
+}
+
+// LoginResponse contains a new token pair.
+message LoginResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  int64 access_token_expires_at_unix = 3;
+  int64 refresh_token_expires_at_unix = 4;
+  User user = 5;
+}
+
+// RefreshRequest exchanges a refresh token for a new token pair.
+message RefreshRequest {
+  string refresh_token = 1;
+  string request_id = 2;
+}
+
+// RefreshResponse contains a rotated token pair.
+message RefreshResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  int64 access_token_expires_at_unix = 3;
+  int64 refresh_token_expires_at_unix = 4;
+  User user = 5;
+}
+
+// LogoutRequest revokes a refresh token.
+message LogoutRequest {
+  string refresh_token = 1;
+  string request_id = 2;
+}
+
+// AuthService handles authentication and session lifecycle.
+service AuthService {
+  // Login authenticates a user and returns an access/refresh token pair.
+  rpc Login(LoginRequest) returns (LoginResponse) {
+    option (google.api.http) = {
+      post: "/v1/auth/login"
+      body: "*"
+    };
+  }
+
+  // Refresh rotates an unexpired refresh token into a new token pair.
+  rpc Refresh(RefreshRequest) returns (RefreshResponse) {
+    option (google.api.http) = {
+      post: "/v1/auth/refresh"
+      body: "*"
+    };
+  }
+
+  // Logout revokes the supplied refresh token.
+  rpc Logout(LogoutRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/v1/auth/logout"
+      body: "*"
+    };
+  }
+}

@@ -1,0 +1,86 @@
+syntax = "proto3";
+
+package tradeforge.v1;
+
+import "tradeforge/v1/common.proto";
+
+option go_package = "github.com/viviwu/tradeforge/gen/tradeforge/v1;tradeforgev1";
+
+// OrderEvent reports an order lifecycle change or execution.
+message OrderEvent {
+  uint64 seq = 1;
+  string order_id = 2;
+  string client_order_id = 3;
+  string account_id = 4;
+  string symbol = 5;
+  Side side = 6;
+  OrderType type = 7;
+  OrderStatus status = 8;
+  // filled_qty is the cumulative filled quantity.
+  int64 filled_qty = 9;
+  // avg_price is the cumulative average fill price.
+  int64 avg_price = 10;
+  // last_fill_qty and last_fill_price describe this event's execution, if any.
+  int64 last_fill_qty = 11;
+  int64 last_fill_price = 12;
+  uint64 trade_seq = 13;
+  string reason = 14;
+  int64 ts_unix_nano = 15;
+}
+
+// StrategyEvent reports a strategy lifecycle change.
+message StrategyEvent {
+  uint64 seq = 1;
+  string strategy_id = 2;
+  string account_id = 3;
+  StrategyStatus status = 4;
+  string reason = 5;
+  int64 ts_unix_nano = 6;
+}
+
+// MarketEvent reports a tick or order book snapshot.
+message MarketEvent {
+  uint64 seq = 1;
+  string symbol = 2;
+  MarketEventType type = 3;
+  int64 bid_price = 4;
+  int64 bid_qty = 5;
+  int64 ask_price = 6;
+  int64 ask_qty = 7;
+  int64 last_price = 8;
+  int64 ts_unix_nano = 9;
+}
+
+// SubscribeOrdersRequest subscribes to order events for the calling account.
+message SubscribeOrdersRequest {
+  string request_id = 1;
+  // from_seq resumes after a known sequence number; zero starts from live.
+  uint64 from_seq = 2;
+  repeated string symbols = 3;
+}
+
+// SubscribeStrategiesRequest subscribes to strategy state changes.
+message SubscribeStrategiesRequest {
+  string request_id = 1;
+  uint64 from_seq = 2;
+  repeated string strategy_ids = 3;
+}
+
+// SubscribeMarketDataRequest subscribes to market data for one or more symbols.
+message SubscribeMarketDataRequest {
+  string request_id = 1;
+  uint64 from_seq = 2;
+  repeated string symbols = 3;
+}
+
+// StreamService exposes server-streaming subscriptions.
+service StreamService {
+  // SubscribeOrders streams order and execution events for the caller.
+  rpc SubscribeOrders(SubscribeOrdersRequest) returns (stream OrderEvent);
+
+  // SubscribeStrategies streams strategy status changes.
+  rpc SubscribeStrategies(SubscribeStrategiesRequest) returns (stream StrategyEvent);
+
+  // SubscribeMarketData streams market data for the requested symbols.
+  rpc SubscribeMarketData(SubscribeMarketDataRequest) returns (stream MarketEvent);
+}
