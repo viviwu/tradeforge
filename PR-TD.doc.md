@@ -260,7 +260,7 @@ CLI 使用 Cobra；TradeApi 提供 Go SDK，CLI 不直接依赖生成的 gRPC st
 
 | 层 | 选型 | 说明 |
 |---|---|---|
-| 语言 | Go 1.22+ | 泛型、`log/slog`、context |
+| 语言 | Go 1.26+ | 泛型、`log/slog`、context；依赖 grpc-go v1.85 的最低版本要求 |
 | RPC | gRPC + Protobuf | IDL-first；server-streaming 做订阅 |
 | REST | grpc-gateway | 同一份 proto 生成 REST |
 | CLI | Cobra + TradeApi | 不直接调 stub |

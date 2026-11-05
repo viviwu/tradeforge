@@ -39,7 +39,7 @@
   - 生成代码输出到 `gen/`，并**提交入库**；CI 通过 `make proto` 后检查工作区无差异来防止漂移。
   - Go import 路径统一为 `github.com/viviwu/tradeforge/gen/tradeforge/v1`。
 - **影响**：修改 proto 后必须重新生成并提交 `gen/`；本地无 buf 时无法完成 codegen。
-- **状态**：已接受，`gen/` 生成待执行（见风险 R-001）。
+- **状态**：已接受，`gen/` 已生成并入库；插件版本固定为 protoc-gen-go v1.36.12、protoc-gen-go-grpc v1.6.2、grpc-gateway/openapiv2 v2.33.0。
 
 ---
 
@@ -62,7 +62,7 @@
 | Go module 与工程配置 | `go.mod`、`.gitignore`、`Makefile` | 已完成 |
 | Protobuf 契约 | `api/proto/tradeforge/v1/{common,auth,trade,stream}.proto` | 已完成 |
 | buf 配置 | `buf.yaml`、`buf.gen.yaml` | 已完成 |
-| 生成 gRPC / gateway / OpenAPI 代码 | `gen/` | 阻塞（本机无 buf、无网络） |
+| 生成 gRPC / gateway / OpenAPI 代码 | `gen/`（`buf.lock` + 固定插件版本） | 已完成 |
 | 初始数据库迁移 | `migrations/`（users、refresh_tokens、orders、trades、positions、accounts、strategies） | 未开始 |
 | pgx store 与配置加载 | `internal/store/`、`internal/config/` | 未开始 |
 | Auth 服务 | `internal/auth/`：Argon2id/bcrypt、JWT、refresh token | 未开始 |
@@ -110,7 +110,7 @@
 
 | 编号 | 风险 | 影响 | 对策 | 状态 |
 |---|---|---|---|---|
-| R-001 | 本地无 buf 且网络不可用，远程插件无法生成代码 | `gen/` 缺失，P0 阻塞 | 网络恢复后执行 `make proto`；或改用本地 protoc 插件 | 开放 |
+| R-001 | Go 官方代理与部分外网在开发机不可达 | 依赖下载/代码生成受阻 | 使用 `GOPROXY=https://goproxy.cn,direct`；buf 及 BSR 已验证可用 | 已解决 |
 | R-002 | 生成代码入库后与 proto 漂移 | 编译结果与契约不一致 | CI 执行 `make proto` 并检查 diff | 待建立 CI |
 | R-003 | 事件与 DB 不一致 | 订单/持仓状态错误 | 幂等消费 + 序列号 + 对账 | 设计已覆盖 |
 | R-004 | 慢消费者拖垮 Gateway | 推送延迟升高 | 独立缓冲 + 行情丢弃 + 背压指标 | 设计已覆盖 |
@@ -126,3 +126,4 @@
 | 2026-11-05 | ADR-001：统一命名体系；设计文档升级 v0.2；新增 README |
 | 2026-11-05 | 删除 C++ 专用 `.clang-format` / `.clang-tidy`，`.gitignore` 切换为 Go 项目 |
 | 2026-11-05 | 初始化 Go module；新增 `tradeforge.v1` proto 契约与 buf 配置；M0 完成，M1 启动 |
+| 2026-11-05 | buf lint 通过并生成 `gen/`（gRPC、gateway、OpenAPI）；固定插件版本；Go 基线调整为 1.26；`go build ./...` 通过；R-001 关闭 |

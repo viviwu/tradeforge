@@ -1,0 +1,754 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "tradeforge/v1/trade.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "TradeService",
+      "description": "TradeService exposes order, trade, position, and strategy queries."
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/orders": {
+      "get": {
+        "summary": "GetOrders lists orders for the calling account.",
+        "operationId": "TradeService_GetOrders",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetOrdersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ORDER_STATUS_UNSPECIFIED",
+              "ORDER_STATUS_PENDING_NEW",
+              "ORDER_STATUS_ACCEPTED",
+              "ORDER_STATUS_PARTIALLY_FILLED",
+              "ORDER_STATUS_FILLED",
+              "ORDER_STATUS_CANCELED",
+              "ORDER_STATUS_REJECTED"
+            ],
+            "default": "ORDER_STATUS_UNSPECIFIED"
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "orderId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "clientOrderId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "fromUnixNano",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "toUnixNano",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "TradeService"
+        ]
+      },
+      "post": {
+        "summary": "SubmitOrder submits a limit or market order.",
+        "operationId": "TradeService_SubmitOrder",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SubmitOrderResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "SubmitOrderRequest submits a new order.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1SubmitOrderRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TradeService"
+        ]
+      }
+    },
+    "/v1/orders:cancel": {
+      "post": {
+        "summary": "CancelOrder cancels an active order.",
+        "operationId": "TradeService_CancelOrder",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CancelOrderResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CancelOrderRequest cancels an order by order_id or client_order_id.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CancelOrderRequest"
+            }
+          }
+        ],
+        "tags": [
+          "TradeService"
+        ]
+      }
+    },
+    "/v1/positions": {
+      "get": {
+        "summary": "GetPositions lists positions for the calling account.",
+        "operationId": "TradeService_GetPositions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetPositionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "accountId",
+            "description": "account_id is only honored for admin callers.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "TradeService"
+        ]
+      }
+    },
+    "/v1/strategies": {
+      "get": {
+        "summary": "GetStrategies lists strategies visible to the caller.",
+        "operationId": "TradeService_GetStrategies",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetStrategiesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "accountId",
+            "description": "account_id is only honored for admin callers.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "STRATEGY_STATUS_UNSPECIFIED",
+              "STRATEGY_STATUS_CREATED",
+              "STRATEGY_STATUS_RUNNING",
+              "STRATEGY_STATUS_PAUSED",
+              "STRATEGY_STATUS_STOPPED",
+              "STRATEGY_STATUS_ERROR"
+            ],
+            "default": "STRATEGY_STATUS_UNSPECIFIED"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "TradeService"
+        ]
+      }
+    },
+    "/v1/trades": {
+      "get": {
+        "summary": "GetTrades lists executions for the calling account.",
+        "operationId": "TradeService_GetTrades",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetTradesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "orderId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "fromUnixNano",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "toUnixNano",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "TradeService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1CancelOrderRequest": {
+      "type": "object",
+      "properties": {
+        "requestId": {
+          "type": "string"
+        },
+        "orderId": {
+          "type": "string"
+        },
+        "clientOrderId": {
+          "type": "string"
+        }
+      },
+      "description": "CancelOrderRequest cancels an order by order_id or client_order_id."
+    },
+    "v1CancelOrderResponse": {
+      "type": "object",
+      "properties": {
+        "orderId": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/v1OrderStatus"
+        },
+        "canceledQty": {
+          "type": "string",
+          "format": "int64"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "description": "CancelOrderResponse is the result of a cancellation."
+    },
+    "v1GetOrdersResponse": {
+      "type": "object",
+      "properties": {
+        "orders": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Order"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      },
+      "description": "GetOrdersResponse is a page of orders."
+    },
+    "v1GetPositionsResponse": {
+      "type": "object",
+      "properties": {
+        "positions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Position"
+          }
+        }
+      },
+      "description": "GetPositionsResponse is the position list."
+    },
+    "v1GetStrategiesResponse": {
+      "type": "object",
+      "properties": {
+        "strategies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Strategy"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      },
+      "description": "GetStrategiesResponse is a page of strategies."
+    },
+    "v1GetTradesResponse": {
+      "type": "object",
+      "properties": {
+        "trades": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Trade"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      },
+      "description": "GetTradesResponse is a page of trades."
+    },
+    "v1Order": {
+      "type": "object",
+      "properties": {
+        "orderId": {
+          "type": "string"
+        },
+        "clientOrderId": {
+          "type": "string"
+        },
+        "accountId": {
+          "type": "string"
+        },
+        "symbol": {
+          "type": "string"
+        },
+        "side": {
+          "$ref": "#/definitions/v1Side"
+        },
+        "type": {
+          "$ref": "#/definitions/v1OrderType"
+        },
+        "timeInForce": {
+          "$ref": "#/definitions/v1TimeInForce"
+        },
+        "price": {
+          "type": "string",
+          "format": "int64"
+        },
+        "quantity": {
+          "type": "string",
+          "format": "int64"
+        },
+        "filledQty": {
+          "type": "string",
+          "format": "int64"
+        },
+        "avgPrice": {
+          "type": "string",
+          "format": "int64"
+        },
+        "status": {
+          "$ref": "#/definitions/v1OrderStatus"
+        },
+        "rejectReason": {
+          "type": "string"
+        },
+        "createdAtUnixNano": {
+          "type": "string",
+          "format": "int64"
+        },
+        "updatedAtUnixNano": {
+          "type": "string",
+          "format": "int64"
+        }
+      },
+      "description": "Order is the persisted view of an order."
+    },
+    "v1OrderStatus": {
+      "type": "string",
+      "enum": [
+        "ORDER_STATUS_UNSPECIFIED",
+        "ORDER_STATUS_PENDING_NEW",
+        "ORDER_STATUS_ACCEPTED",
+        "ORDER_STATUS_PARTIALLY_FILLED",
+        "ORDER_STATUS_FILLED",
+        "ORDER_STATUS_CANCELED",
+        "ORDER_STATUS_REJECTED"
+      ],
+      "default": "ORDER_STATUS_UNSPECIFIED",
+      "description": "OrderStatus is the lifecycle state of an order."
+    },
+    "v1OrderType": {
+      "type": "string",
+      "enum": [
+        "ORDER_TYPE_UNSPECIFIED",
+        "ORDER_TYPE_LIMIT",
+        "ORDER_TYPE_MARKET"
+      ],
+      "default": "ORDER_TYPE_UNSPECIFIED",
+      "description": "OrderType is the order execution type."
+    },
+    "v1Position": {
+      "type": "object",
+      "properties": {
+        "accountId": {
+          "type": "string"
+        },
+        "symbol": {
+          "type": "string"
+        },
+        "quantity": {
+          "type": "string",
+          "format": "int64"
+        },
+        "avgPrice": {
+          "type": "string",
+          "format": "int64"
+        },
+        "frozenQty": {
+          "type": "string",
+          "format": "int64"
+        },
+        "marketPrice": {
+          "type": "string",
+          "format": "int64"
+        },
+        "unrealizedPnl": {
+          "type": "string",
+          "format": "int64"
+        },
+        "updatedAtUnixNano": {
+          "type": "string",
+          "format": "int64"
+        }
+      },
+      "description": "Position is the current holding for an account and symbol."
+    },
+    "v1Side": {
+      "type": "string",
+      "enum": [
+        "SIDE_UNSPECIFIED",
+        "SIDE_BUY",
+        "SIDE_SELL"
+      ],
+      "default": "SIDE_UNSPECIFIED",
+      "description": "Side is the order side."
+    },
+    "v1Strategy": {
+      "type": "object",
+      "properties": {
+        "strategyId": {
+          "type": "string"
+        },
+        "accountId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/v1StrategyStatus"
+        },
+        "paramsJson": {
+          "type": "string"
+        },
+        "createdAtUnixNano": {
+          "type": "string",
+          "format": "int64"
+        },
+        "updatedAtUnixNano": {
+          "type": "string",
+          "format": "int64"
+        }
+      },
+      "description": "Strategy is the lightweight strategy state record."
+    },
+    "v1StrategyStatus": {
+      "type": "string",
+      "enum": [
+        "STRATEGY_STATUS_UNSPECIFIED",
+        "STRATEGY_STATUS_CREATED",
+        "STRATEGY_STATUS_RUNNING",
+        "STRATEGY_STATUS_PAUSED",
+        "STRATEGY_STATUS_STOPPED",
+        "STRATEGY_STATUS_ERROR"
+      ],
+      "default": "STRATEGY_STATUS_UNSPECIFIED",
+      "description": "StrategyStatus is the lifecycle state of a strategy."
+    },
+    "v1SubmitOrderRequest": {
+      "type": "object",
+      "properties": {
+        "requestId": {
+          "type": "string",
+          "description": "request_id is used for tracing and must be unique per call."
+        },
+        "clientOrderId": {
+          "type": "string",
+          "description": "client_order_id is the idempotency key scoped to the account."
+        },
+        "symbol": {
+          "type": "string"
+        },
+        "side": {
+          "$ref": "#/definitions/v1Side"
+        },
+        "type": {
+          "$ref": "#/definitions/v1OrderType"
+        },
+        "timeInForce": {
+          "$ref": "#/definitions/v1TimeInForce"
+        },
+        "price": {
+          "type": "string",
+          "format": "int64",
+          "description": "price is in the minimum unit of the quote currency; ignored for market orders."
+        },
+        "quantity": {
+          "type": "string",
+          "format": "int64"
+        }
+      },
+      "description": "SubmitOrderRequest submits a new order."
+    },
+    "v1SubmitOrderResponse": {
+      "type": "object",
+      "properties": {
+        "orderId": {
+          "type": "string"
+        },
+        "clientOrderId": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/v1OrderStatus"
+        },
+        "rejectReason": {
+          "type": "string"
+        }
+      },
+      "description": "SubmitOrderResponse is the synchronous acknowledgement of a submission."
+    },
+    "v1TimeInForce": {
+      "type": "string",
+      "enum": [
+        "TIME_IN_FORCE_UNSPECIFIED",
+        "TIME_IN_FORCE_GTC",
+        "TIME_IN_FORCE_IOC",
+        "TIME_IN_FORCE_FOK"
+      ],
+      "default": "TIME_IN_FORCE_UNSPECIFIED",
+      "description": "TimeInForce controls how long an order remains active."
+    },
+    "v1Trade": {
+      "type": "object",
+      "properties": {
+        "tradeId": {
+          "type": "string"
+        },
+        "tradeSeq": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "orderId": {
+          "type": "string"
+        },
+        "accountId": {
+          "type": "string"
+        },
+        "symbol": {
+          "type": "string"
+        },
+        "side": {
+          "$ref": "#/definitions/v1Side"
+        },
+        "price": {
+          "type": "string",
+          "format": "int64"
+        },
+        "quantity": {
+          "type": "string",
+          "format": "int64"
+        },
+        "createdAtUnixNano": {
+          "type": "string",
+          "format": "int64"
+        }
+      },
+      "description": "Trade is a single execution."
+    }
+  }
+}

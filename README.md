@@ -63,9 +63,10 @@ forge sub orders
 
 ## 开发
 
-需要 Go 1.22+、buf 与 Docker（数据库）。
+需要 Go 1.26+、buf 与 Docker（数据库）。首次使用可安装 buf：
 
 ```bash
+go install github.com/bufbuild/buf/cmd/buf@v1.75.0
 make proto    # buf lint + 生成 gRPC/gateway/OpenAPI 代码
 make build    # 编译所有 Go 包
 make test     # 运行测试
@@ -74,7 +75,7 @@ make help     # 查看全部命令
 
 ## 技术栈
 
-Go 1.22+ · gRPC + Protobuf · grpc-gateway · Cobra · PostgreSQL 16 · pgx/sqlc · golang-migrate · Prometheus · OpenTelemetry · Docker Compose
+Go 1.26+ · gRPC + Protobuf · grpc-gateway · Cobra · PostgreSQL 16 · pgx/sqlc · golang-migrate · Prometheus · OpenTelemetry · Docker Compose
 
 ## 开发路线
 
