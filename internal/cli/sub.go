@@ -163,13 +163,13 @@ func splitSymbols(value string) []string {
 
 func printOrderEvent(event *pb.OrderEvent) {
 	fmt.Printf("[seq=%d] order=%s status=%s filled=%d avg=%s reason=%s\n",
-		event.GetSeq(), event.GetOrderId(), shortEnum(string(event.GetStatus())), event.GetFilledQty(),
+		event.GetSeq(), event.GetOrderId(), shortEnum(event.GetStatus().String()), event.GetFilledQty(),
 		money(event.GetAvgPrice()), event.GetReason())
 }
 
 func printStrategyEvent(event *pb.StrategyEvent) {
 	fmt.Printf("[seq=%d] strategy=%s status=%s reason=%s\n",
-		event.GetSeq(), event.GetStrategyId(), shortEnum(string(event.GetStatus())), event.GetReason())
+		event.GetSeq(), event.GetStrategyId(), shortEnum(event.GetStatus().String()), event.GetReason())
 }
 
 func printMarketEvent(event *pb.MarketEvent) {

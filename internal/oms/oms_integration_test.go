@@ -178,6 +178,92 @@ func TestSubmitCrossSettleAndIdempotency(t *testing.T) {
 	}
 }
 
+func TestMarketBuyBudget(t *testing.T) {
+	f := setup(t)
+	buyer := f.account(t, 1_500_000)
+	seller := f.account(t, 10_000_000)
+	f.position(t, seller, "AAPL", 200, 9_000)
+
+	if _, err := f.oms.Submit(f.ctx, seller, oms.SubmitRequest{
+		ClientOrderID: "marker-ask",
+		Symbol:        "AAPL",
+		Side:          domain.SideSell,
+		Type:          domain.OrderTypeLimit,
+		Price:         10_000,
+		Quantity:      100,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	oversized, err := f.oms.Submit(f.ctx, buyer, oms.SubmitRequest{
+		ClientOrderID: "market-too-big",
+		Symbol:        "AAPL",
+		Side:          domain.SideBuy,
+		Type:          domain.OrderTypeMarket,
+		Quantity:      300,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if oversized.Status != domain.OrderStatusRejected {
+		t.Fatalf("oversized market buy = %+v", oversized)
+	}
+	if account, _ := f.st.GetAccount(f.ctx, buyer); account.FrozenCash != 0 || account.AvailableCash != 1_500_000 {
+		t.Fatalf("rejected market buy mutated funds: %+v", account)
+	}
+	if oversized.Price != 3_000_000 {
+		t.Fatalf("budget not recorded: %d", oversized.Price)
+	}
+
+	filled, err := f.oms.Submit(f.ctx, buyer, oms.SubmitRequest{
+		ClientOrderID: "market-fill",
+		Symbol:        "AAPL",
+		Side:          domain.SideBuy,
+		Type:          domain.OrderTypeMarket,
+		Quantity:      100,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if filled.Status != domain.OrderStatusFilled || filled.AvgPrice != 10_000 {
+		t.Fatalf("market fill = %+v", filled)
+	}
+	account, _ := f.st.GetAccount(f.ctx, buyer)
+	if account.FrozenCash != 0 || account.AvailableCash != 500_000 {
+		t.Fatalf("buyer funds after market fill = %+v", account)
+	}
+	position, err := f.st.GetPosition(f.ctx, buyer, "AAPL")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if position.Quantity != 100 || position.AvgPrice != 10_000 {
+		t.Fatalf("buyer position = %+v", position)
+	}
+
+	noLiquidity, err := f.oms.Submit(f.ctx, buyer, oms.SubmitRequest{
+		ClientOrderID: "market-empty-book",
+		Symbol:        "AAPL",
+		Side:          domain.SideBuy,
+		Type:          domain.OrderTypeMarket,
+		Quantity:      10,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if noLiquidity.Status != domain.OrderStatusRejected {
+		t.Fatalf("empty book market buy = %+v", noLiquidity)
+	}
+	if account, _ := f.st.GetAccount(f.ctx, buyer); account.FrozenCash != 0 || account.AvailableCash != 500_000 {
+		t.Fatalf("empty book market buy mutated funds: %+v", account)
+	}
+
+	if mismatches, err := f.st.ReconcileOrderFills(f.ctx); err != nil {
+		t.Fatal(err)
+	} else if len(mismatches) != 0 {
+		t.Fatalf("mismatches: %+v", mismatches)
+	}
+}
+
 func TestRecoverRestoresRestingOrders(t *testing.T) {
 	f := setup(t)
 	buyer := f.account(t, 10_000_000)

@@ -113,7 +113,7 @@
 1. ~~补充 `docs/benchmarks.md`~~（已完成：登录/挂单/成交三路径基线，见 docs/benchmarks.md）。
 2. ~~按 symbol 分片锁~~（已完成：多标的成交吞吐 472→1172 rps，见 docs/benchmarks.md）。
 3. ~~建立 CI~~（已完成：`.github/workflows/ci.yml`，proto 漂移检测 + race 测试已验证红/绿）。
-4. 待做：市价单资金预校验、订单簿持久化快照、更细粒度限流。
+4. 待做：订单簿持久化快照、更细粒度限流。
 
 ### 3.2 阶段验收门禁
 
@@ -154,3 +154,5 @@
 | 2026-11-05 | 新增 `docs/benchmarks.md` P4 基线：登录 0 err，挂单 753 rps p50=10.6ms，成交 472 rps p50=34.2ms；串行锁为主要瓶颈 |
 | 2026-11-06 | 建立 GitHub Actions CI（proto 漂移检测 + build/vet/race 单测/集成测试），R-002 关闭；漂移检测经故意污染验证有效 |
 | 2026-11-06 | OMS 锁按 symbol 分片（ADR-003 预留演进）：4 标的成交 1172 rps（单标的 ×2.25）；kill -9 演练通过，重启 Recover + 挂单簿重建验证 |
+| 2026-11-06 | 市价买预算冻结：按最优卖价估算冻结额（存于订单 price），settle/release 与限价单统一口径，防止透支；空盘口直接拒绝 |
+| 2026-11-06 | CLI 新增 `forge stress order`；修复 CLI 枚举显示（int32 enum 误用 string() 转换，改用 .String()） | |

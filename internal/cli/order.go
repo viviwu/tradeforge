@@ -74,7 +74,7 @@ func (a *App) orderSubmitCommand() *cobra.Command {
 					return printProto(resp)
 				}
 				fmt.Printf("order_id=%s client_order_id=%s status=%s\n",
-					resp.GetOrderId(), resp.GetClientOrderId(), shortEnum(string(resp.GetStatus())))
+					resp.GetOrderId(), resp.GetClientOrderId(), shortEnum(resp.GetStatus().String()))
 				if resp.GetRejectReason() != "" {
 					fmt.Printf("reject_reason=%s\n", resp.GetRejectReason())
 				}
@@ -120,7 +120,7 @@ func (a *App) orderCancelCommand() *cobra.Command {
 					return printProto(resp)
 				}
 				fmt.Printf("order_id=%s status=%s canceled_qty=%d\n",
-					resp.GetOrderId(), shortEnum(string(resp.GetStatus())), resp.GetCanceledQty())
+					resp.GetOrderId(), shortEnum(resp.GetStatus().String()), resp.GetCanceledQty())
 				return nil
 			})
 		},

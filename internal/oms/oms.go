@@ -114,7 +114,7 @@ func (s *Service) Submit(ctx context.Context, accountID string, req SubmitReques
 		UpdatedAt:     now,
 	}
 
-	rejected, reason, err := s.createAndFreeze(ctx, order)
+	rejected, reason, err := s.createAndFreeze(ctx, &order)
 	if err != nil {
 		if errors.Is(err, store.ErrDuplicate) {
 			return s.store.GetOrderByClientID(ctx, accountID, req.ClientOrderID)
@@ -158,7 +158,9 @@ func (s *Service) Submit(ctx context.Context, accountID string, req SubmitReques
 	return updatedOrders[order.ID], nil
 }
 
-func (s *Service) createAndFreeze(ctx context.Context, order domain.Order) (bool, string, error) {
+// createAndFreeze may overwrite order.Price for market buys (see case below),
+// so it takes a pointer.
+func (s *Service) createAndFreeze(ctx context.Context, order *domain.Order) (bool, string, error) {
 	var (
 		rejected bool
 		reason   string
@@ -172,6 +174,26 @@ func (s *Service) createAndFreeze(ctx context.Context, order domain.Order) (bool
 			return err
 		}
 		switch {
+		case order.Side == domain.SideBuy && order.Type == domain.OrderTypeMarket:
+			ask, err := s.engine.BestAskPrice(ctx, order.Symbol)
+			if err != nil {
+				return err
+			}
+			budget := ask * order.Quantity
+			order.Price = budget
+			if budget > 0 {
+				if account.AvailableCash < budget {
+					rejected = true
+					reason = ErrInsufficientFunds.Error()
+					break
+				}
+				account.AvailableCash -= budget
+				account.FrozenCash += budget
+				account.UpdatedAt = s.now()
+				if err := tx.UpdateAccount(ctx, account); err != nil {
+					return err
+				}
+			}
 		case order.Side == domain.SideBuy && order.Type == domain.OrderTypeLimit:
 			cost := order.Price * order.Quantity
 			if account.AvailableCash < cost {
@@ -205,15 +227,12 @@ func (s *Service) createAndFreeze(ctx context.Context, order domain.Order) (bool
 			if err := tx.UpsertPosition(ctx, position); err != nil {
 				return err
 			}
-		case order.Side == domain.SideBuy && account.AvailableCash <= 0:
-			rejected = true
-			reason = ErrInsufficientFunds.Error()
 		}
 		if rejected {
 			order.Status = domain.OrderStatusRejected
 			order.RejectReason = reason
 		}
-		return tx.CreateOrder(ctx, order)
+		return tx.CreateOrder(ctx, *order)
 	})
 	return rejected, reason, err
 }
@@ -648,16 +667,12 @@ func (t *txState) settleFill(buyer, seller *domain.Order, fill domain.Fill) erro
 	if err != nil {
 		return err
 	}
-	if buyer.Type == domain.OrderTypeLimit {
-		take := notional
-		if buyerAccount.FrozenCash < take {
-			take = buyerAccount.FrozenCash
-		}
-		buyerAccount.FrozenCash -= take
-		buyerAccount.AvailableCash -= notional - take
-	} else {
-		buyerAccount.AvailableCash -= notional
+	take := notional
+	if buyerAccount.FrozenCash < take {
+		take = buyerAccount.FrozenCash
 	}
+	buyerAccount.FrozenCash -= take
+	buyerAccount.AvailableCash -= notional - take
 	buyerAccount.UpdatedAt = t.now
 	t.dirtyAcct[buyer.AccountID] = true
 
@@ -698,7 +713,7 @@ func (t *txState) releaseTerminal(order *domain.Order) error {
 	if !order.Status.Terminal() {
 		return nil
 	}
-	if order.Side == domain.SideBuy && order.Type == domain.OrderTypeLimit {
+	if order.Side == domain.SideBuy {
 		notional, err := t.st.FilledNotional(t.ctx, order.ID)
 		if err != nil {
 			return err

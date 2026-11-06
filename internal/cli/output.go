@@ -35,8 +35,8 @@ func printOrders(resp *pb.GetOrdersResponse) error {
 	fmt.Fprintln(w, "ORDER_ID\tSYMBOL\tSIDE\tTYPE\tPRICE\tQTY\tFILLED\tAVG\tSTATUS\tCLIENT_ORDER_ID")
 	for _, o := range resp.GetOrders() {
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%d\t%d\t%s\t%s\t%s\n",
-			o.GetOrderId(), o.GetSymbol(), shortEnum(string(o.GetSide())), shortEnum(string(o.GetType())), money(o.GetPrice()),
-			o.GetQuantity(), o.GetFilledQty(), money(o.GetAvgPrice()), shortEnum(string(o.GetStatus())), o.GetClientOrderId())
+			o.GetOrderId(), o.GetSymbol(), shortEnum(o.GetSide().String()), shortEnum(o.GetType().String()), money(o.GetPrice()),
+			o.GetQuantity(), o.GetFilledQty(), money(o.GetAvgPrice()), shortEnum(o.GetStatus().String()), o.GetClientOrderId())
 	}
 	if resp.GetNextPageToken() != "" {
 		fmt.Fprintf(w, "\nnext_page_token\t%s\n", resp.GetNextPageToken())
@@ -49,7 +49,7 @@ func printTrades(resp *pb.GetTradesResponse) error {
 	fmt.Fprintln(w, "TRADE_SEQ\tTRADE_ID\tORDER_ID\tSYMBOL\tSIDE\tPRICE\tQTY\tTIME")
 	for _, t := range resp.GetTrades() {
 		fmt.Fprintf(w, "%d\t%s\t%s\t%s\t%s\t%s\t%d\t%s\n",
-			t.GetTradeSeq(), t.GetTradeId(), t.GetOrderId(), t.GetSymbol(), shortEnum(string(t.GetSide())),
+			t.GetTradeSeq(), t.GetTradeId(), t.GetOrderId(), t.GetSymbol(), shortEnum(t.GetSide().String()),
 			money(t.GetPrice()), t.GetQuantity(), formatNano(t.GetCreatedAtUnixNano()))
 	}
 	if resp.GetNextPageToken() != "" {
@@ -74,7 +74,7 @@ func printStrategies(resp *pb.GetStrategiesResponse) error {
 	fmt.Fprintln(w, "STRATEGY_ID\tNAME\tSTATUS\tUPDATED\tPARAMS")
 	for _, s := range resp.GetStrategies() {
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
-			s.GetStrategyId(), s.GetName(), shortEnum(string(s.GetStatus())), formatNano(s.GetUpdatedAtUnixNano()), s.GetParamsJson())
+			s.GetStrategyId(), s.GetName(), shortEnum(s.GetStatus().String()), formatNano(s.GetUpdatedAtUnixNano()), s.GetParamsJson())
 	}
 	if resp.GetNextPageToken() != "" {
 		fmt.Fprintf(w, "\nnext_page_token\t%s\n", resp.GetNextPageToken())

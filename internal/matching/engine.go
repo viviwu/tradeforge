@@ -31,6 +31,7 @@ type command struct {
 	order    domain.Order
 	reply    chan Result
 	replyErr chan error
+	replyInt chan int64
 }
 
 type Engine struct {
@@ -76,6 +77,8 @@ func (e *Engine) run() {
 				cmd.reply <- e.processCancel(cmd.order.ID)
 			case "restore":
 				cmd.replyErr <- e.processRestore(cmd.order)
+			case "price":
+				cmd.replyInt <- e.processBestAskPrice(cmd.order.Symbol)
 			}
 		}
 	}
@@ -99,6 +102,33 @@ func (e *Engine) Submit(ctx context.Context, order domain.Order) (Result, error)
 	case <-ctx.Done():
 		return Result{}, ctx.Err()
 	}
+}
+
+// BestAskPrice returns the best ask price for a symbol, or 0 when the book is
+// empty. It is used by the OMS to budget-market buy orders.
+func (e *Engine) BestAskPrice(ctx context.Context, symbol string) (int64, error) {
+	reply := make(chan int64, 1)
+	select {
+	case e.cmds <- command{kind: "price", order: domain.Order{Symbol: symbol}, replyInt: reply}:
+	case <-ctx.Done():
+		return 0, ctx.Err()
+	case <-e.done:
+		return 0, context.Canceled
+	}
+	select {
+	case price := <-reply:
+		return price, nil
+	case <-ctx.Done():
+		return 0, ctx.Err()
+	}
+}
+
+func (e *Engine) processBestAskPrice(symbol string) int64 {
+	b := e.books[symbol]
+	if b == nil || len(b.asks) == 0 {
+		return 0
+	}
+	return b.asks[0].order.Price
 }
 
 func (e *Engine) Restore(ctx context.Context, order domain.Order) error {
