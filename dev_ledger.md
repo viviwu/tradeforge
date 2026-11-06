@@ -110,7 +110,7 @@
 
 ### 3.1 下一步执行顺序（M5）
 
-1. 补充 `docs/benchmarks.md`：下单、登录、订阅压测结果与瓶颈分析。
+1. ~~补充 `docs/benchmarks.md`~~（已完成：登录/挂单/成交三路径基线，见 docs/benchmarks.md）。
 2. 视需要按 symbol 分片锁，提升多标的并发度。
 3. 建立 CI：`make proto` 后 diff 检查、`go vet`、单元与集成测试。
 4. 评估市价单资金校验、盘口持久化与更细粒度限流。
@@ -151,3 +151,4 @@
 | 2026-11-05 | 完成 M1–M4 MVP：撮合/OMS、冻结结算、订阅与回放、SDK/CLI、行情与 Console、Docker 部署 |
 | 2026-11-05 | ADR-003：撮合结果串行落库；启动恢复活动订单；新增单元测试与 PostgreSQL 集成测试 |
 | 2026-11-05 | 修复重复刷新 Token 竞态（原子消费 refresh token）；健康检查与 REST 联调通过 |
+| 2026-11-05 | 新增 `docs/benchmarks.md` P4 基线：登录 0 err，挂单 753 rps p50=10.6ms，成交 472 rps p50=34.2ms；串行锁为主要瓶颈 |
