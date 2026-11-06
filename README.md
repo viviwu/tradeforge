@@ -42,6 +42,7 @@ TradeForge 是一个用 Go 编写的**模拟交易系统**，用于练习高并�
 - **重启恢复**：启动时加载 `PENDING_NEW` / `ACCEPTED` / `PARTIALLY_FILLED` 订单，GTC 限价单重新挂回内存订单簿，非 GTC 单自动撤销并释放冻结。
 - **幂等与对账**：`client_order_id` 唯一索引保证下单幂等，`trade_seq` 保证成交消费幂等，定期对账发现漂移。
 - **金额整数化**：价格与金额统一使用 `int64` 最小单位，禁止浮点。
+- **按账号限流**：下单/撤单、查询、订阅分别按账号令牌桶限流，超配返回 429（`ResourceExhausted`），并暴露 `tradeforge_rate_limited_total` 指标；登录限流为按 IP 防爆破。
 
 ## 功能范围
 
@@ -98,6 +99,9 @@ curl -s http://localhost:8080/v1/orders -H "Authorization: Bearer $TOKEN"
 | `TRADEFORGE_JWT_SECRET` | `dev-secret-change-me` | 生产必须替换 |
 | `TRADEFORGE_SEED` | `true` | 是否写入演示用户与策略 |
 | `TRADEFORGE_SYMBOLS` | `AAPL,MSFT,TSLA,NVDA` | 可交易标的 |
+| `TRADEFORGE_ORDER_RPS` / `TRADEFORGE_ORDER_BURST` | `50` / `100` | 每账号每秒下单/撤单数（0 关闭限流） |
+| `TRADEFORGE_QUERY_RPS` / `TRADEFORGE_QUERY_BURST` | `200` / `400` | 每账号每秒交易查询数（0 关闭限流） |
+| `TRADEFORGE_MAX_STREAMS` | `16` | 每账号最大并发订阅数（0 不限制） |
 
 > 演示密码与默认 JWT secret 仅用于本地开发，部署到共享环境前必须修改。
 
@@ -135,7 +139,7 @@ Go 1.26+ · gRPC + Protobuf · grpc-gateway · Cobra · PostgreSQL 17 · pgx · 
 | P1 | 撮合引擎、OMS 订单状态、下单/撤单、订单查询（已完成） |
 | P2 | 持仓投影、事件订阅、TradeApi 重连（已完成） |
 | P3 | 模拟行情、行情订阅、Forge Console（已完成） |
-| P4 | 压测、限流、背压、对账、故障恢复（恢复/对账/背压已完成，基准测试待补） |
+| P4 | 压测、限流、背压、对账、故障恢复（恢复/对账/背压/按账号限流已完成，订单簿快照待做） |
 | P5 | 可选：拆分服务、NATS、L2 行情、策略沙箱 |
 
 ## 文档

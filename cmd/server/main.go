@@ -81,18 +81,27 @@ func run() error {
 		logger.Info("recovered active orders", "count", recovered)
 	}
 	metrics := observability.New()
+	rateLimiter := gateway.NewRateLimiter(gateway.RateLimits{
+		TradePerSecond: cfg.TradeRPS,
+		TradeBurst:     cfg.TradeBurst,
+		QueryPerSecond: cfg.QueryRPS,
+		QueryBurst:     cfg.QueryBurst,
+		MaxStreams:     cfg.MaxStreams,
+	}, metrics)
 
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			gateway.RecoveryUnaryInterceptor(logger),
 			metrics.UnaryServerInterceptor(),
 			gateway.AuthUnaryInterceptor(authService),
+			rateLimiter.UnaryInterceptor(),
 			gateway.LoggingUnaryInterceptor(logger),
 		),
 		grpc.ChainStreamInterceptor(
 			gateway.RecoveryStreamInterceptor(logger),
 			metrics.StreamServerInterceptor(),
 			gateway.AuthStreamInterceptor(authService),
+			rateLimiter.StreamInterceptor(),
 			gateway.LoggingStreamInterceptor(logger),
 		),
 	)

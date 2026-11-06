@@ -24,6 +24,11 @@ type Config struct {
 
 	LoginRatePerSecond float64
 	LoginRateBurst     int
+	TradeRPS           float64
+	TradeBurst         int
+	QueryRPS           float64
+	QueryBurst         int
+	MaxStreams         int
 	MarketBuffer       int
 	OrderBuffer        int
 	ReplayBuffer       int
@@ -45,6 +50,11 @@ func Load() Config {
 		LogLevel:           env("TRADEFORGE_LOG_LEVEL", "info"),
 		LoginRatePerSecond: envFloat("TRADEFORGE_LOGIN_RPS", 20),
 		LoginRateBurst:     envInt("TRADEFORGE_LOGIN_BURST", 40),
+		TradeRPS:           envFloat("TRADEFORGE_ORDER_RPS", 50),
+		TradeBurst:         envInt("TRADEFORGE_ORDER_BURST", 100),
+		QueryRPS:           envFloat("TRADEFORGE_QUERY_RPS", 200),
+		QueryBurst:         envInt("TRADEFORGE_QUERY_BURST", 400),
+		MaxStreams:         envInt("TRADEFORGE_MAX_STREAMS", 16),
 		MarketBuffer:       envInt("TRADEFORGE_MARKET_BUFFER", 256),
 		OrderBuffer:        envInt("TRADEFORGE_ORDER_BUFFER", 1024),
 		ReplayBuffer:       envInt("TRADEFORGE_REPLAY_BUFFER", 4096),

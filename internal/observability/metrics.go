@@ -19,6 +19,7 @@ type Metrics struct {
 	OrdersSubmitted prometheus.Counter
 	TradesTotal     prometheus.Counter
 	SlowConsumers   prometheus.Counter
+	RateLimited     *prometheus.CounterVec
 }
 
 func New() *Metrics {
@@ -46,8 +47,12 @@ func New() *Metrics {
 			Name: "tradeforge_slow_consumers_total",
 			Help: "Total number of subscriptions terminated for slow consumption.",
 		}),
+		RateLimited: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Name: "tradeforge_rate_limited_total",
+			Help: "Requests rejected by the rate limiter.",
+		}, []string{"kind"}),
 	}
-	registry.MustRegister(m.requests, m.duration, m.OrdersSubmitted, m.TradesTotal, m.SlowConsumers)
+	registry.MustRegister(m.requests, m.duration, m.OrdersSubmitted, m.TradesTotal, m.SlowConsumers, m.RateLimited)
 	registry.MustRegister(prometheus.NewGoCollector())
 	registry.MustRegister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
 	return m
