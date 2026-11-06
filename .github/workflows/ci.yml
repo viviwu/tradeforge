@@ -1,0 +1,65 @@
+name: ci
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  proto:
+    name: proto (lint + codegen drift)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install buf v1.75.0
+        run: |
+          curl -fsSL -o /tmp/buf "https://github.com/bufbuild/buf/releases/download/v1.75.0/buf-$(uname -s)-$(uname -m)"
+          chmod +x /tmp/buf
+          sudo mv /tmp/buf /usr/local/bin/buf
+          buf --version
+      - name: Lint proto
+        run: buf lint
+      - name: Generate gRPC / gateway / OpenAPI code
+        run: buf generate
+      - name: Check generated code is committed
+        run: |
+          git add -N gen/
+          git diff --exit-code -- gen/
+
+  go:
+    name: build + vet + tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: tradeforge
+          POSTGRES_PASSWORD: tradeforge
+          POSTGRES_DB: tradeforge
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U tradeforge"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      TRADEFORGE_TEST_DSN: postgres://tradeforge:tradeforge@localhost:55432/tradeforge?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Build
+        run: go build ./...
+      - name: Vet
+        run: go vet ./...
+      - name: Unit tests (race)
+        run: go test ./... -race -count=1
+      - name: Integration tests (race)
+        run: go test -tags=integration -race -count=1 ./internal/oms -v
