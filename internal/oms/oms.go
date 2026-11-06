@@ -40,7 +40,9 @@ type Service struct {
 	bus     *eventbus.Bus
 	symbols map[string]struct{}
 	now     func() time.Time
-	mu      sync.Mutex
+
+	locksMu sync.RWMutex
+	locks   map[string]*sync.Mutex
 }
 
 func New(st store.Store, engine *matching.Engine, bus *eventbus.Bus, symbols []string) *Service {
@@ -49,12 +51,33 @@ func New(st store.Store, engine *matching.Engine, bus *eventbus.Bus, symbols []s
 		engine:  engine,
 		bus:     bus,
 		symbols: make(map[string]struct{}, len(symbols)),
+		locks:   make(map[string]*sync.Mutex, len(symbols)),
 		now:     func() time.Time { return time.Now().UTC() },
 	}
 	for _, sym := range symbols {
 		s.symbols[sym] = struct{}{}
+		s.locks[sym] = &sync.Mutex{}
 	}
 	return s
+}
+
+// lockFor returns the settle lock for a symbol. Orders on different symbols
+// settle concurrently; orders on the same symbol settle in engine order.
+func (s *Service) lockFor(symbol string) *sync.Mutex {
+	s.locksMu.RLock()
+	if mu, ok := s.locks[symbol]; ok {
+		s.locksMu.RUnlock()
+		return mu
+	}
+	s.locksMu.RUnlock()
+	s.locksMu.Lock()
+	defer s.locksMu.Unlock()
+	if mu, ok := s.locks[symbol]; ok {
+		return mu
+	}
+	mu := &sync.Mutex{}
+	s.locks[symbol] = mu
+	return mu
 }
 
 func (s *Service) Submit(ctx context.Context, accountID string, req SubmitRequest) (domain.Order, error) {
@@ -105,11 +128,12 @@ func (s *Service) Submit(ctx context.Context, accountID string, req SubmitReques
 		return order, nil
 	}
 
-	s.mu.Lock()
+	settle := s.lockFor(order.Symbol)
+	settle.Lock()
 	result, err := s.engine.Submit(ctx, order)
 	if err != nil {
 		rejectedOrder, rejectErr := s.rejectOrder(ctx, order, err.Error())
-		s.mu.Unlock()
+		settle.Unlock()
 		if rejectErr != nil {
 			return domain.Order{}, rejectErr
 		}
@@ -118,7 +142,7 @@ func (s *Service) Submit(ctx context.Context, accountID string, req SubmitReques
 	}
 
 	updatedOrders, trades, positions, err := s.applyResult(ctx, order, result)
-	s.mu.Unlock()
+	settle.Unlock()
 	if err != nil {
 		return domain.Order{}, err
 	}
@@ -294,16 +318,19 @@ func (s *Service) applyResult(ctx context.Context, takerOrder domain.Order, resu
 }
 
 func (s *Service) Cancel(ctx context.Context, accountID, orderID, clientOrderID string) (domain.Order, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.cancel(ctx, accountID, orderID, clientOrderID)
-}
-
-func (s *Service) cancel(ctx context.Context, accountID, orderID, clientOrderID string) (domain.Order, error) {
 	order, err := s.lookupOrder(ctx, accountID, orderID, clientOrderID)
 	if err != nil {
 		return domain.Order{}, err
 	}
+	settle := s.lockFor(order.Symbol)
+	settle.Lock()
+	defer settle.Unlock()
+	return s.cancel(ctx, accountID, order)
+}
+
+// cancel assumes the symbol settle lock is held. The order must have been
+// looked up by the caller; state is re-read with FOR UPDATE inside the tx.
+func (s *Service) cancel(ctx context.Context, accountID string, order domain.Order) (domain.Order, error) {
 	if order.Status.Terminal() {
 		return order, nil
 	}
@@ -315,7 +342,7 @@ func (s *Service) cancel(ctx context.Context, accountID, orderID, clientOrderID 
 		state   *txState
 		changed bool
 	)
-	err = s.store.WithTx(ctx, func(tx store.Store) error {
+	err := s.store.WithTx(ctx, func(tx store.Store) error {
 		state = newTxState(ctx, tx, s.now())
 		current, err := state.order(order.ID)
 		if err != nil {
@@ -366,31 +393,35 @@ func (s *Service) lookupOrder(ctx context.Context, accountID, orderID, clientOrd
 }
 
 func (s *Service) Recover(ctx context.Context) (int, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	active, err := s.store.ListActiveOrders(ctx)
 	if err != nil {
 		return 0, err
 	}
 	for _, order := range active {
-		if order.Type != domain.OrderTypeLimit || order.TimeInForce != domain.TimeInForceGTC {
-			if _, err := s.cancel(ctx, order.AccountID, order.ID, ""); err != nil {
-				return 0, err
+		if err := func() error {
+			settle := s.lockFor(order.Symbol)
+			settle.Lock()
+			defer settle.Unlock()
+
+			if order.Type != domain.OrderTypeLimit || order.TimeInForce != domain.TimeInForceGTC {
+				_, err := s.cancel(ctx, order.AccountID, order)
+				return err
 			}
-			continue
-		}
-		if order.Status == domain.OrderStatusPendingNew {
-			order.Status = domain.OrderStatusAccepted
-			order.UpdatedAt = s.now()
-			if err := s.store.UpdateOrder(ctx, order); err != nil {
-				return 0, err
+			if order.Status == domain.OrderStatusPendingNew {
+				order.Status = domain.OrderStatusAccepted
+				order.UpdatedAt = s.now()
+				if err := s.store.UpdateOrder(ctx, order); err != nil {
+					return err
+				}
 			}
-		}
-		if err := s.engine.Restore(ctx, order); err != nil {
-			if _, cancelErr := s.cancel(ctx, order.AccountID, order.ID, ""); cancelErr != nil {
-				return 0, cancelErr
+			if err := s.engine.Restore(ctx, order); err != nil {
+				if _, cancelErr := s.cancel(ctx, order.AccountID, order); cancelErr != nil {
+					return cancelErr
+				}
 			}
+			return nil
+		}(); err != nil {
+			return 0, err
 		}
 	}
 	return len(active), nil

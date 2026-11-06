@@ -111,9 +111,9 @@
 ### 3.1 下一步执行顺序（M5）
 
 1. ~~补充 `docs/benchmarks.md`~~（已完成：登录/挂单/成交三路径基线，见 docs/benchmarks.md）。
-2. 视需要按 symbol 分片锁，提升多标的并发度。
+2. ~~按 symbol 分片锁~~（已完成：多标的成交吞吐 472→1172 rps，见 docs/benchmarks.md）。
 3. ~~建立 CI~~（已完成：`.github/workflows/ci.yml`，proto 漂移检测 + race 测试已验证红/绿）。
-4. 评估市价单资金校验、盘口持久化与更细粒度限流。
+4. 待做：市价单资金预校验、订单簿持久化快照、更细粒度限流。
 
 ### 3.2 阶段验收门禁
 
@@ -153,3 +153,4 @@
 | 2026-11-05 | 修复重复刷新 Token 竞态（原子消费 refresh token）；健康检查与 REST 联调通过 |
 | 2026-11-05 | 新增 `docs/benchmarks.md` P4 基线：登录 0 err，挂单 753 rps p50=10.6ms，成交 472 rps p50=34.2ms；串行锁为主要瓶颈 |
 | 2026-11-06 | 建立 GitHub Actions CI（proto 漂移检测 + build/vet/race 单测/集成测试），R-002 关闭；漂移检测经故意污染验证有效 |
+| 2026-11-06 | OMS 锁按 symbol 分片（ADR-003 预留演进）：4 标的成交 1172 rps（单标的 ×2.25）；kill -9 演练通过，重启 Recover + 挂单簿重建验证 |
