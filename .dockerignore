@@ -1,0 +1,9 @@
+.git
+.gitignore
+build/
+bin/
+*.log
+deploy/
+docs/
+PR-TD.doc.md
+dev_ledger.md

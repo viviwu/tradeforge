@@ -1,13 +1,14 @@
 GO ?= go
 BUF ?= buf
 
-.PHONY: help proto proto-lint proto-generate build test fmt vet tidy migrate-up migrate-down compose-up compose-down clean
+.PHONY: help proto proto-lint proto-generate build test test-integration fmt vet tidy migrate-up migrate-down compose-up compose-down clean
 
 help:
 	@printf '%s\n' \
 		'make proto          Lint and generate protobuf code' \
 		'make build          Build all Go packages' \
-		'make test           Run all tests' \
+		'make test           Run unit tests' \
+		'make test-integration Run PostgreSQL integration tests' \
 		'make fmt            Format Go sources' \
 		'make vet            Run go vet' \
 		'make tidy           Tidy Go modules' \
@@ -29,6 +30,10 @@ build:
 
 test:
 	$(GO) test ./...
+
+test-integration:
+	TRADEFORGE_TEST_DSN="$${TRADEFORGE_TEST_DSN:-postgres://tradeforge:tradeforge@localhost:55432/tradeforge?sslmode=disable}" \
+		$(GO) test -tags=integration ./internal/oms -v
 
 fmt:
 	gofmt -w $$($(GO) list -f '{{.Dir}}' ./...)

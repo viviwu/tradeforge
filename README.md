@@ -2,7 +2,7 @@
 
 TradeForge 是一个用 Go 编写的**模拟交易系统**，用于练习高并发、gRPC、事件驱动和交易系统设计。系统支持 CLI 高并发登录、下单、撤单、查询，以及订单/策略状态和行情的实时订阅，并提供 Web 管理端。
 
-> 当前状态：**P0 骨架进行中**，`tradeforge.v1` proto 契约已建立，服务端与 CLI 待实现。需求与技术方案见 [PR-TD.doc.md](./PR-TD.doc.md)，进度与决策见 [dev_ledger.md](./dev_ledger.md)。
+> 当前状态：**P0–P4 主链路 MVP 已完成**。服务端、CLI、Go SDK、撮合/OMS、订阅、行情、Forge Console、Docker 部署与 Postgres 集成测试均已可运行。需求与技术方案见 [PR-TD.doc.md](./PR-TD.doc.md)，进度与决策见 [dev_ledger.md](./dev_ledger.md)。
 
 ## 命名体系
 
@@ -36,8 +36,9 @@ TradeForge 是一个用 Go 编写的**模拟交易系统**，用于练习高并�
 ## 核心设计
 
 - **单写者撮合**：所有下单/撤单进入同一命令 channel，由单个 goroutine 顺序处理订单簿。
-- **OMS 按账户串行**：每个账户独立 worker 消费成交事件，避免行锁竞争。
+- **成交串行落库**：撮合结果在同一临界区内按顺序写库，避免并发事务覆盖同一 maker 订单；账户/订单行锁保证资金与持仓一致。
 - **事件驱动**：统一事件信封带 `seq`，订单/成交事件不可静默丢弃，行情可丢弃旧快照并告警。
+- **重启恢复**：启动时加载 `PENDING_NEW` / `ACCEPTED` / `PARTIALLY_FILLED` 订单，GTC 限价单重新挂回内存订单簿，非 GTC 单自动撤销并释放冻结。
 - **幂等与对账**：`client_order_id` 唯一索引保证下单幂等，`trade_seq` 保证成交消费幂等，定期对账发现漂移。
 - **金额整数化**：价格与金额统一使用 `int64` 最小单位，禁止浮点。
 
@@ -52,14 +53,52 @@ TradeForge 是一个用 Go 编写的**模拟交易系统**，用于练习高并�
 
 ## 快速开始
 
-开发环境尚未就绪。P0 阶段完成后将提供：
+```bash
+# 启动 PostgreSQL + 服务端（首次会构建镜像并自动迁移、写入演示数据）
+docker compose -f deploy/docker-compose.yml up -d --build
+
+# 构建 CLI
+go build -o bin/forge ./cmd/forge
+
+# 登录（演示账号 alice/alice123、admin/admin123）
+bin/forge login --user alice --password alice123
+
+# 下单、查询、订阅
+bin/forge order submit --symbol AAPL --side BUY --type LIMIT --price 10000 --qty 10
+bin/forge query orders
+bin/forge query positions
+bin/forge sub market --symbol AAPL
+bin/forge sub orders
+```
+
+价格与金额均为最小单位整数（示例中 `10000` 显示为 `100.00`）。CLI 支持 `--output table|json`，Token 缓存在 `~/.config/forge/config.json`（`FORGE_CONFIG` 可覆盖）。
+
+Forge Console：<http://localhost:8080>，指标：<http://localhost:8080/metrics>，健康检查：<http://localhost:8080/healthz>。
+
+### REST 示例
 
 ```bash
-docker compose -f deploy/docker-compose.yml up -d
-forge login --user alice
-forge order submit --symbol AAPL --side BUY --type LIMIT --price 100 --qty 10
-forge sub orders
+TOKEN=$(curl -s -X POST http://localhost:8080/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"alice","password":"alice123"}' | jq -r .accessToken)
+
+curl -s http://localhost:8080/v1/orders -H "Authorization: Bearer $TOKEN"
 ```
+
+### 配置
+
+服务端通过环境变量配置，常用项：
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `TRADEFORGE_GRPC_ADDR` | `:9090` | gRPC 监听地址 |
+| `TRADEFORGE_HTTP_ADDR` | `:8080` | REST / Console 监听地址 |
+| `TRADEFORGE_DB_DSN` | 本地 `tradeforge` 库 | PostgreSQL DSN |
+| `TRADEFORGE_JWT_SECRET` | `dev-secret-change-me` | 生产必须替换 |
+| `TRADEFORGE_SEED` | `true` | 是否写入演示用户与策略 |
+| `TRADEFORGE_SYMBOLS` | `AAPL,MSFT,TSLA,NVDA` | 可交易标的 |
+
+> 演示密码与默认 JWT secret 仅用于本地开发，部署到共享环境前必须修改。
 
 ## 开发
 
@@ -67,25 +106,35 @@ forge sub orders
 
 ```bash
 go install github.com/bufbuild/buf/cmd/buf@v1.75.0
-make proto    # buf lint + 生成 gRPC/gateway/OpenAPI 代码
-make build    # 编译所有 Go 包
-make test     # 运行测试
-make help     # 查看全部命令
+make proto              # buf lint + 生成 gRPC/gateway/OpenAPI 代码
+make build              # 编译所有 Go 包
+make test               # 单元测试
+make test-integration   # PostgreSQL 集成测试（默认 localhost:55432）
+make help               # 查看全部命令
+```
+
+集成测试使用独立数据库，先启动一次性 PostgreSQL：
+
+```bash
+docker run -d --name tf-test-postgres \
+  -e POSTGRES_USER=tradeforge -e POSTGRES_PASSWORD=tradeforge -e POSTGRES_DB=tradeforge \
+  -p 55432:5432 postgres:17-alpine
+make test-integration
 ```
 
 ## 技术栈
 
-Go 1.26+ · gRPC + Protobuf · grpc-gateway · Cobra · PostgreSQL 16 · pgx/sqlc · golang-migrate · Prometheus · OpenTelemetry · Docker Compose
+Go 1.26+ · gRPC + Protobuf · grpc-gateway · Cobra · PostgreSQL 17 · pgx · 内嵌 SQL 迁移 · Prometheus · Docker Compose
 
 ## 开发路线
 
 | 阶段 | 内容 |
 |---|---|
-| P0 | 骨架、proto、Auth、数据库迁移、docker-compose |
-| P1 | 撮合引擎、OMS 订单状态、下单/撤单、订单查询 |
-| P2 | 持仓投影、事件订阅、TradeApi 重连 |
-| P3 | 模拟行情、行情订阅、Forge Console |
-| P4 | 压测、限流、背压、对账、故障恢复 |
+| P0 | 骨架、proto、Auth、数据库迁移、docker-compose（已完成） |
+| P1 | 撮合引擎、OMS 订单状态、下单/撤单、订单查询（已完成） |
+| P2 | 持仓投影、事件订阅、TradeApi 重连（已完成） |
+| P3 | 模拟行情、行情订阅、Forge Console（已完成） |
+| P4 | 压测、限流、背压、对账、故障恢复（恢复/对账/背压已完成，基准测试待补） |
 | P5 | 可选：拆分服务、NATS、L2 行情、策略沙箱 |
 
 ## 文档

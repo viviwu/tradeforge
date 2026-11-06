@@ -389,6 +389,112 @@ func (x *Position) GetUpdatedAtUnixNano() int64 {
 	return 0
 }
 
+// UpdateStrategyStatusRequest changes the lifecycle state of a strategy.
+type UpdateStrategyStatusRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RequestId     string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	StrategyId    string                 `protobuf:"bytes,2,opt,name=strategy_id,json=strategyId,proto3" json:"strategy_id,omitempty"`
+	Status        StrategyStatus         `protobuf:"varint,3,opt,name=status,proto3,enum=tradeforge.v1.StrategyStatus" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateStrategyStatusRequest) Reset() {
+	*x = UpdateStrategyStatusRequest{}
+	mi := &file_tradeforge_v1_trade_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateStrategyStatusRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateStrategyStatusRequest) ProtoMessage() {}
+
+func (x *UpdateStrategyStatusRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tradeforge_v1_trade_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateStrategyStatusRequest.ProtoReflect.Descriptor instead.
+func (*UpdateStrategyStatusRequest) Descriptor() ([]byte, []int) {
+	return file_tradeforge_v1_trade_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *UpdateStrategyStatusRequest) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+func (x *UpdateStrategyStatusRequest) GetStrategyId() string {
+	if x != nil {
+		return x.StrategyId
+	}
+	return ""
+}
+
+func (x *UpdateStrategyStatusRequest) GetStatus() StrategyStatus {
+	if x != nil {
+		return x.Status
+	}
+	return StrategyStatus_STRATEGY_STATUS_UNSPECIFIED
+}
+
+// UpdateStrategyStatusResponse returns the updated strategy.
+type UpdateStrategyStatusResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Strategy      *Strategy              `protobuf:"bytes,1,opt,name=strategy,proto3" json:"strategy,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateStrategyStatusResponse) Reset() {
+	*x = UpdateStrategyStatusResponse{}
+	mi := &file_tradeforge_v1_trade_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateStrategyStatusResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateStrategyStatusResponse) ProtoMessage() {}
+
+func (x *UpdateStrategyStatusResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tradeforge_v1_trade_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateStrategyStatusResponse.ProtoReflect.Descriptor instead.
+func (*UpdateStrategyStatusResponse) Descriptor() ([]byte, []int) {
+	return file_tradeforge_v1_trade_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *UpdateStrategyStatusResponse) GetStrategy() *Strategy {
+	if x != nil {
+		return x.Strategy
+	}
+	return nil
+}
+
 // Strategy is the lightweight strategy state record.
 type Strategy struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
@@ -405,7 +511,7 @@ type Strategy struct {
 
 func (x *Strategy) Reset() {
 	*x = Strategy{}
-	mi := &file_tradeforge_v1_trade_proto_msgTypes[3]
+	mi := &file_tradeforge_v1_trade_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -417,7 +523,7 @@ func (x *Strategy) String() string {
 func (*Strategy) ProtoMessage() {}
 
 func (x *Strategy) ProtoReflect() protoreflect.Message {
-	mi := &file_tradeforge_v1_trade_proto_msgTypes[3]
+	mi := &file_tradeforge_v1_trade_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -430,7 +536,7 @@ func (x *Strategy) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Strategy.ProtoReflect.Descriptor instead.
 func (*Strategy) Descriptor() ([]byte, []int) {
-	return file_tradeforge_v1_trade_proto_rawDescGZIP(), []int{3}
+	return file_tradeforge_v1_trade_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Strategy) GetStrategyId() string {
@@ -502,7 +608,7 @@ type SubmitOrderRequest struct {
 
 func (x *SubmitOrderRequest) Reset() {
 	*x = SubmitOrderRequest{}
-	mi := &file_tradeforge_v1_trade_proto_msgTypes[4]
+	mi := &file_tradeforge_v1_trade_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -514,7 +620,7 @@ func (x *SubmitOrderRequest) String() string {
 func (*SubmitOrderRequest) ProtoMessage() {}
 
 func (x *SubmitOrderRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tradeforge_v1_trade_proto_msgTypes[4]
+	mi := &file_tradeforge_v1_trade_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -527,7 +633,7 @@ func (x *SubmitOrderRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubmitOrderRequest.ProtoReflect.Descriptor instead.
 func (*SubmitOrderRequest) Descriptor() ([]byte, []int) {
-	return file_tradeforge_v1_trade_proto_rawDescGZIP(), []int{4}
+	return file_tradeforge_v1_trade_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *SubmitOrderRequest) GetRequestId() string {
@@ -599,7 +705,7 @@ type SubmitOrderResponse struct {
 
 func (x *SubmitOrderResponse) Reset() {
 	*x = SubmitOrderResponse{}
-	mi := &file_tradeforge_v1_trade_proto_msgTypes[5]
+	mi := &file_tradeforge_v1_trade_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -611,7 +717,7 @@ func (x *SubmitOrderResponse) String() string {
 func (*SubmitOrderResponse) ProtoMessage() {}
 
 func (x *SubmitOrderResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tradeforge_v1_trade_proto_msgTypes[5]
+	mi := &file_tradeforge_v1_trade_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -624,7 +730,7 @@ func (x *SubmitOrderResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubmitOrderResponse.ProtoReflect.Descriptor instead.
 func (*SubmitOrderResponse) Descriptor() ([]byte, []int) {
-	return file_tradeforge_v1_trade_proto_rawDescGZIP(), []int{5}
+	return file_tradeforge_v1_trade_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *SubmitOrderResponse) GetOrderId() string {
@@ -667,7 +773,7 @@ type CancelOrderRequest struct {
 
 func (x *CancelOrderRequest) Reset() {
 	*x = CancelOrderRequest{}
-	mi := &file_tradeforge_v1_trade_proto_msgTypes[6]
+	mi := &file_tradeforge_v1_trade_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -679,7 +785,7 @@ func (x *CancelOrderRequest) String() string {
 func (*CancelOrderRequest) ProtoMessage() {}
 
 func (x *CancelOrderRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tradeforge_v1_trade_proto_msgTypes[6]
+	mi := &file_tradeforge_v1_trade_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -692,7 +798,7 @@ func (x *CancelOrderRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelOrderRequest.ProtoReflect.Descriptor instead.
 func (*CancelOrderRequest) Descriptor() ([]byte, []int) {
-	return file_tradeforge_v1_trade_proto_rawDescGZIP(), []int{6}
+	return file_tradeforge_v1_trade_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *CancelOrderRequest) GetRequestId() string {
@@ -729,7 +835,7 @@ type CancelOrderResponse struct {
 
 func (x *CancelOrderResponse) Reset() {
 	*x = CancelOrderResponse{}
-	mi := &file_tradeforge_v1_trade_proto_msgTypes[7]
+	mi := &file_tradeforge_v1_trade_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -741,7 +847,7 @@ func (x *CancelOrderResponse) String() string {
 func (*CancelOrderResponse) ProtoMessage() {}
 
 func (x *CancelOrderResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tradeforge_v1_trade_proto_msgTypes[7]
+	mi := &file_tradeforge_v1_trade_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -754,7 +860,7 @@ func (x *CancelOrderResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelOrderResponse.ProtoReflect.Descriptor instead.
 func (*CancelOrderResponse) Descriptor() ([]byte, []int) {
-	return file_tradeforge_v1_trade_proto_rawDescGZIP(), []int{7}
+	return file_tradeforge_v1_trade_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *CancelOrderResponse) GetOrderId() string {
@@ -803,7 +909,7 @@ type GetOrdersRequest struct {
 
 func (x *GetOrdersRequest) Reset() {
 	*x = GetOrdersRequest{}
-	mi := &file_tradeforge_v1_trade_proto_msgTypes[8]
+	mi := &file_tradeforge_v1_trade_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -815,7 +921,7 @@ func (x *GetOrdersRequest) String() string {
 func (*GetOrdersRequest) ProtoMessage() {}
 
 func (x *GetOrdersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tradeforge_v1_trade_proto_msgTypes[8]
+	mi := &file_tradeforge_v1_trade_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -828,7 +934,7 @@ func (x *GetOrdersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetOrdersRequest.ProtoReflect.Descriptor instead.
 func (*GetOrdersRequest) Descriptor() ([]byte, []int) {
-	return file_tradeforge_v1_trade_proto_rawDescGZIP(), []int{8}
+	return file_tradeforge_v1_trade_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *GetOrdersRequest) GetRequestId() string {
@@ -905,7 +1011,7 @@ type GetOrdersResponse struct {
 
 func (x *GetOrdersResponse) Reset() {
 	*x = GetOrdersResponse{}
-	mi := &file_tradeforge_v1_trade_proto_msgTypes[9]
+	mi := &file_tradeforge_v1_trade_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -917,7 +1023,7 @@ func (x *GetOrdersResponse) String() string {
 func (*GetOrdersResponse) ProtoMessage() {}
 
 func (x *GetOrdersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tradeforge_v1_trade_proto_msgTypes[9]
+	mi := &file_tradeforge_v1_trade_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -930,7 +1036,7 @@ func (x *GetOrdersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetOrdersResponse.ProtoReflect.Descriptor instead.
 func (*GetOrdersResponse) Descriptor() ([]byte, []int) {
-	return file_tradeforge_v1_trade_proto_rawDescGZIP(), []int{9}
+	return file_tradeforge_v1_trade_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *GetOrdersResponse) GetOrders() []*Order {
@@ -963,7 +1069,7 @@ type GetTradesRequest struct {
 
 func (x *GetTradesRequest) Reset() {
 	*x = GetTradesRequest{}
-	mi := &file_tradeforge_v1_trade_proto_msgTypes[10]
+	mi := &file_tradeforge_v1_trade_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -975,7 +1081,7 @@ func (x *GetTradesRequest) String() string {
 func (*GetTradesRequest) ProtoMessage() {}
 
 func (x *GetTradesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tradeforge_v1_trade_proto_msgTypes[10]
+	mi := &file_tradeforge_v1_trade_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -988,7 +1094,7 @@ func (x *GetTradesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTradesRequest.ProtoReflect.Descriptor instead.
 func (*GetTradesRequest) Descriptor() ([]byte, []int) {
-	return file_tradeforge_v1_trade_proto_rawDescGZIP(), []int{10}
+	return file_tradeforge_v1_trade_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *GetTradesRequest) GetRequestId() string {
@@ -1051,7 +1157,7 @@ type GetTradesResponse struct {
 
 func (x *GetTradesResponse) Reset() {
 	*x = GetTradesResponse{}
-	mi := &file_tradeforge_v1_trade_proto_msgTypes[11]
+	mi := &file_tradeforge_v1_trade_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1063,7 +1169,7 @@ func (x *GetTradesResponse) String() string {
 func (*GetTradesResponse) ProtoMessage() {}
 
 func (x *GetTradesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tradeforge_v1_trade_proto_msgTypes[11]
+	mi := &file_tradeforge_v1_trade_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1076,7 +1182,7 @@ func (x *GetTradesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTradesResponse.ProtoReflect.Descriptor instead.
 func (*GetTradesResponse) Descriptor() ([]byte, []int) {
-	return file_tradeforge_v1_trade_proto_rawDescGZIP(), []int{11}
+	return file_tradeforge_v1_trade_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *GetTradesResponse) GetTrades() []*Trade {
@@ -1106,7 +1212,7 @@ type GetPositionsRequest struct {
 
 func (x *GetPositionsRequest) Reset() {
 	*x = GetPositionsRequest{}
-	mi := &file_tradeforge_v1_trade_proto_msgTypes[12]
+	mi := &file_tradeforge_v1_trade_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1118,7 +1224,7 @@ func (x *GetPositionsRequest) String() string {
 func (*GetPositionsRequest) ProtoMessage() {}
 
 func (x *GetPositionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tradeforge_v1_trade_proto_msgTypes[12]
+	mi := &file_tradeforge_v1_trade_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1131,7 +1237,7 @@ func (x *GetPositionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPositionsRequest.ProtoReflect.Descriptor instead.
 func (*GetPositionsRequest) Descriptor() ([]byte, []int) {
-	return file_tradeforge_v1_trade_proto_rawDescGZIP(), []int{12}
+	return file_tradeforge_v1_trade_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *GetPositionsRequest) GetRequestId() string {
@@ -1165,7 +1271,7 @@ type GetPositionsResponse struct {
 
 func (x *GetPositionsResponse) Reset() {
 	*x = GetPositionsResponse{}
-	mi := &file_tradeforge_v1_trade_proto_msgTypes[13]
+	mi := &file_tradeforge_v1_trade_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1177,7 +1283,7 @@ func (x *GetPositionsResponse) String() string {
 func (*GetPositionsResponse) ProtoMessage() {}
 
 func (x *GetPositionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tradeforge_v1_trade_proto_msgTypes[13]
+	mi := &file_tradeforge_v1_trade_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1190,7 +1296,7 @@ func (x *GetPositionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPositionsResponse.ProtoReflect.Descriptor instead.
 func (*GetPositionsResponse) Descriptor() ([]byte, []int) {
-	return file_tradeforge_v1_trade_proto_rawDescGZIP(), []int{13}
+	return file_tradeforge_v1_trade_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *GetPositionsResponse) GetPositions() []*Position {
@@ -1215,7 +1321,7 @@ type GetStrategiesRequest struct {
 
 func (x *GetStrategiesRequest) Reset() {
 	*x = GetStrategiesRequest{}
-	mi := &file_tradeforge_v1_trade_proto_msgTypes[14]
+	mi := &file_tradeforge_v1_trade_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1227,7 +1333,7 @@ func (x *GetStrategiesRequest) String() string {
 func (*GetStrategiesRequest) ProtoMessage() {}
 
 func (x *GetStrategiesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tradeforge_v1_trade_proto_msgTypes[14]
+	mi := &file_tradeforge_v1_trade_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1240,7 +1346,7 @@ func (x *GetStrategiesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetStrategiesRequest.ProtoReflect.Descriptor instead.
 func (*GetStrategiesRequest) Descriptor() ([]byte, []int) {
-	return file_tradeforge_v1_trade_proto_rawDescGZIP(), []int{14}
+	return file_tradeforge_v1_trade_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *GetStrategiesRequest) GetRequestId() string {
@@ -1289,7 +1395,7 @@ type GetStrategiesResponse struct {
 
 func (x *GetStrategiesResponse) Reset() {
 	*x = GetStrategiesResponse{}
-	mi := &file_tradeforge_v1_trade_proto_msgTypes[15]
+	mi := &file_tradeforge_v1_trade_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1301,7 +1407,7 @@ func (x *GetStrategiesResponse) String() string {
 func (*GetStrategiesResponse) ProtoMessage() {}
 
 func (x *GetStrategiesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tradeforge_v1_trade_proto_msgTypes[15]
+	mi := &file_tradeforge_v1_trade_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1314,7 +1420,7 @@ func (x *GetStrategiesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetStrategiesResponse.ProtoReflect.Descriptor instead.
 func (*GetStrategiesResponse) Descriptor() ([]byte, []int) {
-	return file_tradeforge_v1_trade_proto_rawDescGZIP(), []int{15}
+	return file_tradeforge_v1_trade_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *GetStrategiesResponse) GetStrategies() []*Strategy {
@@ -1376,7 +1482,15 @@ const file_tradeforge_v1_trade_proto_rawDesc = "" +
 	"frozen_qty\x18\x05 \x01(\x03R\tfrozenQty\x12!\n" +
 	"\fmarket_price\x18\x06 \x01(\x03R\vmarketPrice\x12%\n" +
 	"\x0eunrealized_pnl\x18\a \x01(\x03R\runrealizedPnl\x12/\n" +
-	"\x14updated_at_unix_nano\x18\b \x01(\x03R\x11updatedAtUnixNano\"\x98\x02\n" +
+	"\x14updated_at_unix_nano\x18\b \x01(\x03R\x11updatedAtUnixNano\"\x94\x01\n" +
+	"\x1bUpdateStrategyStatusRequest\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\x12\x1f\n" +
+	"\vstrategy_id\x18\x02 \x01(\tR\n" +
+	"strategyId\x125\n" +
+	"\x06status\x18\x03 \x01(\x0e2\x1d.tradeforge.v1.StrategyStatusR\x06status\"S\n" +
+	"\x1cUpdateStrategyStatusResponse\x123\n" +
+	"\bstrategy\x18\x01 \x01(\v2\x17.tradeforge.v1.StrategyR\bstrategy\"\x98\x02\n" +
 	"\bStrategy\x12\x1f\n" +
 	"\vstrategy_id\x18\x01 \x01(\tR\n" +
 	"strategyId\x12\x1d\n" +
@@ -1464,7 +1578,7 @@ const file_tradeforge_v1_trade_proto_rawDesc = "" +
 	"\n" +
 	"strategies\x18\x01 \x03(\v2\x17.tradeforge.v1.StrategyR\n" +
 	"strategies\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken2\x9b\x05\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken2\xbd\x06\n" +
 	"\fTradeService\x12k\n" +
 	"\vSubmitOrder\x12!.tradeforge.v1.SubmitOrderRequest\x1a\".tradeforge.v1.SubmitOrderResponse\"\x15\x82\xd3\xe4\x93\x02\x0f:\x01*\"\n" +
 	"/v1/orders\x12r\n" +
@@ -1474,7 +1588,8 @@ const file_tradeforge_v1_trade_proto_rawDesc = "" +
 	"\tGetTrades\x12\x1f.tradeforge.v1.GetTradesRequest\x1a .tradeforge.v1.GetTradesResponse\"\x12\x82\xd3\xe4\x93\x02\f\x12\n" +
 	"/v1/trades\x12n\n" +
 	"\fGetPositions\x12\".tradeforge.v1.GetPositionsRequest\x1a#.tradeforge.v1.GetPositionsResponse\"\x15\x82\xd3\xe4\x93\x02\x0f\x12\r/v1/positions\x12r\n" +
-	"\rGetStrategies\x12#.tradeforge.v1.GetStrategiesRequest\x1a$.tradeforge.v1.GetStrategiesResponse\"\x16\x82\xd3\xe4\x93\x02\x10\x12\x0e/v1/strategiesB=Z;github.com/viviwu/tradeforge/gen/tradeforge/v1;tradeforgev1b\x06proto3"
+	"\rGetStrategies\x12#.tradeforge.v1.GetStrategiesRequest\x1a$.tradeforge.v1.GetStrategiesResponse\"\x16\x82\xd3\xe4\x93\x02\x10\x12\x0e/v1/strategies\x12\x9f\x01\n" +
+	"\x14UpdateStrategyStatus\x12*.tradeforge.v1.UpdateStrategyStatusRequest\x1a+.tradeforge.v1.UpdateStrategyStatusResponse\".\x82\xd3\xe4\x93\x02(:\x01*\"#/v1/strategies/{strategy_id}/statusB=Z;github.com/viviwu/tradeforge/gen/tradeforge/v1;tradeforgev1b\x06proto3"
 
 var (
 	file_tradeforge_v1_trade_proto_rawDescOnce sync.Once
@@ -1488,65 +1603,71 @@ func file_tradeforge_v1_trade_proto_rawDescGZIP() []byte {
 	return file_tradeforge_v1_trade_proto_rawDescData
 }
 
-var file_tradeforge_v1_trade_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_tradeforge_v1_trade_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_tradeforge_v1_trade_proto_goTypes = []any{
-	(*Order)(nil),                 // 0: tradeforge.v1.Order
-	(*Trade)(nil),                 // 1: tradeforge.v1.Trade
-	(*Position)(nil),              // 2: tradeforge.v1.Position
-	(*Strategy)(nil),              // 3: tradeforge.v1.Strategy
-	(*SubmitOrderRequest)(nil),    // 4: tradeforge.v1.SubmitOrderRequest
-	(*SubmitOrderResponse)(nil),   // 5: tradeforge.v1.SubmitOrderResponse
-	(*CancelOrderRequest)(nil),    // 6: tradeforge.v1.CancelOrderRequest
-	(*CancelOrderResponse)(nil),   // 7: tradeforge.v1.CancelOrderResponse
-	(*GetOrdersRequest)(nil),      // 8: tradeforge.v1.GetOrdersRequest
-	(*GetOrdersResponse)(nil),     // 9: tradeforge.v1.GetOrdersResponse
-	(*GetTradesRequest)(nil),      // 10: tradeforge.v1.GetTradesRequest
-	(*GetTradesResponse)(nil),     // 11: tradeforge.v1.GetTradesResponse
-	(*GetPositionsRequest)(nil),   // 12: tradeforge.v1.GetPositionsRequest
-	(*GetPositionsResponse)(nil),  // 13: tradeforge.v1.GetPositionsResponse
-	(*GetStrategiesRequest)(nil),  // 14: tradeforge.v1.GetStrategiesRequest
-	(*GetStrategiesResponse)(nil), // 15: tradeforge.v1.GetStrategiesResponse
-	(Side)(0),                     // 16: tradeforge.v1.Side
-	(OrderType)(0),                // 17: tradeforge.v1.OrderType
-	(TimeInForce)(0),              // 18: tradeforge.v1.TimeInForce
-	(OrderStatus)(0),              // 19: tradeforge.v1.OrderStatus
-	(StrategyStatus)(0),           // 20: tradeforge.v1.StrategyStatus
+	(*Order)(nil),                        // 0: tradeforge.v1.Order
+	(*Trade)(nil),                        // 1: tradeforge.v1.Trade
+	(*Position)(nil),                     // 2: tradeforge.v1.Position
+	(*UpdateStrategyStatusRequest)(nil),  // 3: tradeforge.v1.UpdateStrategyStatusRequest
+	(*UpdateStrategyStatusResponse)(nil), // 4: tradeforge.v1.UpdateStrategyStatusResponse
+	(*Strategy)(nil),                     // 5: tradeforge.v1.Strategy
+	(*SubmitOrderRequest)(nil),           // 6: tradeforge.v1.SubmitOrderRequest
+	(*SubmitOrderResponse)(nil),          // 7: tradeforge.v1.SubmitOrderResponse
+	(*CancelOrderRequest)(nil),           // 8: tradeforge.v1.CancelOrderRequest
+	(*CancelOrderResponse)(nil),          // 9: tradeforge.v1.CancelOrderResponse
+	(*GetOrdersRequest)(nil),             // 10: tradeforge.v1.GetOrdersRequest
+	(*GetOrdersResponse)(nil),            // 11: tradeforge.v1.GetOrdersResponse
+	(*GetTradesRequest)(nil),             // 12: tradeforge.v1.GetTradesRequest
+	(*GetTradesResponse)(nil),            // 13: tradeforge.v1.GetTradesResponse
+	(*GetPositionsRequest)(nil),          // 14: tradeforge.v1.GetPositionsRequest
+	(*GetPositionsResponse)(nil),         // 15: tradeforge.v1.GetPositionsResponse
+	(*GetStrategiesRequest)(nil),         // 16: tradeforge.v1.GetStrategiesRequest
+	(*GetStrategiesResponse)(nil),        // 17: tradeforge.v1.GetStrategiesResponse
+	(Side)(0),                            // 18: tradeforge.v1.Side
+	(OrderType)(0),                       // 19: tradeforge.v1.OrderType
+	(TimeInForce)(0),                     // 20: tradeforge.v1.TimeInForce
+	(OrderStatus)(0),                     // 21: tradeforge.v1.OrderStatus
+	(StrategyStatus)(0),                  // 22: tradeforge.v1.StrategyStatus
 }
 var file_tradeforge_v1_trade_proto_depIdxs = []int32{
-	16, // 0: tradeforge.v1.Order.side:type_name -> tradeforge.v1.Side
-	17, // 1: tradeforge.v1.Order.type:type_name -> tradeforge.v1.OrderType
-	18, // 2: tradeforge.v1.Order.time_in_force:type_name -> tradeforge.v1.TimeInForce
-	19, // 3: tradeforge.v1.Order.status:type_name -> tradeforge.v1.OrderStatus
-	16, // 4: tradeforge.v1.Trade.side:type_name -> tradeforge.v1.Side
-	20, // 5: tradeforge.v1.Strategy.status:type_name -> tradeforge.v1.StrategyStatus
-	16, // 6: tradeforge.v1.SubmitOrderRequest.side:type_name -> tradeforge.v1.Side
-	17, // 7: tradeforge.v1.SubmitOrderRequest.type:type_name -> tradeforge.v1.OrderType
-	18, // 8: tradeforge.v1.SubmitOrderRequest.time_in_force:type_name -> tradeforge.v1.TimeInForce
-	19, // 9: tradeforge.v1.SubmitOrderResponse.status:type_name -> tradeforge.v1.OrderStatus
-	19, // 10: tradeforge.v1.CancelOrderResponse.status:type_name -> tradeforge.v1.OrderStatus
-	19, // 11: tradeforge.v1.GetOrdersRequest.status:type_name -> tradeforge.v1.OrderStatus
-	0,  // 12: tradeforge.v1.GetOrdersResponse.orders:type_name -> tradeforge.v1.Order
-	1,  // 13: tradeforge.v1.GetTradesResponse.trades:type_name -> tradeforge.v1.Trade
-	2,  // 14: tradeforge.v1.GetPositionsResponse.positions:type_name -> tradeforge.v1.Position
-	20, // 15: tradeforge.v1.GetStrategiesRequest.status:type_name -> tradeforge.v1.StrategyStatus
-	3,  // 16: tradeforge.v1.GetStrategiesResponse.strategies:type_name -> tradeforge.v1.Strategy
-	4,  // 17: tradeforge.v1.TradeService.SubmitOrder:input_type -> tradeforge.v1.SubmitOrderRequest
-	6,  // 18: tradeforge.v1.TradeService.CancelOrder:input_type -> tradeforge.v1.CancelOrderRequest
-	8,  // 19: tradeforge.v1.TradeService.GetOrders:input_type -> tradeforge.v1.GetOrdersRequest
-	10, // 20: tradeforge.v1.TradeService.GetTrades:input_type -> tradeforge.v1.GetTradesRequest
-	12, // 21: tradeforge.v1.TradeService.GetPositions:input_type -> tradeforge.v1.GetPositionsRequest
-	14, // 22: tradeforge.v1.TradeService.GetStrategies:input_type -> tradeforge.v1.GetStrategiesRequest
-	5,  // 23: tradeforge.v1.TradeService.SubmitOrder:output_type -> tradeforge.v1.SubmitOrderResponse
-	7,  // 24: tradeforge.v1.TradeService.CancelOrder:output_type -> tradeforge.v1.CancelOrderResponse
-	9,  // 25: tradeforge.v1.TradeService.GetOrders:output_type -> tradeforge.v1.GetOrdersResponse
-	11, // 26: tradeforge.v1.TradeService.GetTrades:output_type -> tradeforge.v1.GetTradesResponse
-	13, // 27: tradeforge.v1.TradeService.GetPositions:output_type -> tradeforge.v1.GetPositionsResponse
-	15, // 28: tradeforge.v1.TradeService.GetStrategies:output_type -> tradeforge.v1.GetStrategiesResponse
-	23, // [23:29] is the sub-list for method output_type
-	17, // [17:23] is the sub-list for method input_type
-	17, // [17:17] is the sub-list for extension type_name
-	17, // [17:17] is the sub-list for extension extendee
-	0,  // [0:17] is the sub-list for field type_name
+	18, // 0: tradeforge.v1.Order.side:type_name -> tradeforge.v1.Side
+	19, // 1: tradeforge.v1.Order.type:type_name -> tradeforge.v1.OrderType
+	20, // 2: tradeforge.v1.Order.time_in_force:type_name -> tradeforge.v1.TimeInForce
+	21, // 3: tradeforge.v1.Order.status:type_name -> tradeforge.v1.OrderStatus
+	18, // 4: tradeforge.v1.Trade.side:type_name -> tradeforge.v1.Side
+	22, // 5: tradeforge.v1.UpdateStrategyStatusRequest.status:type_name -> tradeforge.v1.StrategyStatus
+	5,  // 6: tradeforge.v1.UpdateStrategyStatusResponse.strategy:type_name -> tradeforge.v1.Strategy
+	22, // 7: tradeforge.v1.Strategy.status:type_name -> tradeforge.v1.StrategyStatus
+	18, // 8: tradeforge.v1.SubmitOrderRequest.side:type_name -> tradeforge.v1.Side
+	19, // 9: tradeforge.v1.SubmitOrderRequest.type:type_name -> tradeforge.v1.OrderType
+	20, // 10: tradeforge.v1.SubmitOrderRequest.time_in_force:type_name -> tradeforge.v1.TimeInForce
+	21, // 11: tradeforge.v1.SubmitOrderResponse.status:type_name -> tradeforge.v1.OrderStatus
+	21, // 12: tradeforge.v1.CancelOrderResponse.status:type_name -> tradeforge.v1.OrderStatus
+	21, // 13: tradeforge.v1.GetOrdersRequest.status:type_name -> tradeforge.v1.OrderStatus
+	0,  // 14: tradeforge.v1.GetOrdersResponse.orders:type_name -> tradeforge.v1.Order
+	1,  // 15: tradeforge.v1.GetTradesResponse.trades:type_name -> tradeforge.v1.Trade
+	2,  // 16: tradeforge.v1.GetPositionsResponse.positions:type_name -> tradeforge.v1.Position
+	22, // 17: tradeforge.v1.GetStrategiesRequest.status:type_name -> tradeforge.v1.StrategyStatus
+	5,  // 18: tradeforge.v1.GetStrategiesResponse.strategies:type_name -> tradeforge.v1.Strategy
+	6,  // 19: tradeforge.v1.TradeService.SubmitOrder:input_type -> tradeforge.v1.SubmitOrderRequest
+	8,  // 20: tradeforge.v1.TradeService.CancelOrder:input_type -> tradeforge.v1.CancelOrderRequest
+	10, // 21: tradeforge.v1.TradeService.GetOrders:input_type -> tradeforge.v1.GetOrdersRequest
+	12, // 22: tradeforge.v1.TradeService.GetTrades:input_type -> tradeforge.v1.GetTradesRequest
+	14, // 23: tradeforge.v1.TradeService.GetPositions:input_type -> tradeforge.v1.GetPositionsRequest
+	16, // 24: tradeforge.v1.TradeService.GetStrategies:input_type -> tradeforge.v1.GetStrategiesRequest
+	3,  // 25: tradeforge.v1.TradeService.UpdateStrategyStatus:input_type -> tradeforge.v1.UpdateStrategyStatusRequest
+	7,  // 26: tradeforge.v1.TradeService.SubmitOrder:output_type -> tradeforge.v1.SubmitOrderResponse
+	9,  // 27: tradeforge.v1.TradeService.CancelOrder:output_type -> tradeforge.v1.CancelOrderResponse
+	11, // 28: tradeforge.v1.TradeService.GetOrders:output_type -> tradeforge.v1.GetOrdersResponse
+	13, // 29: tradeforge.v1.TradeService.GetTrades:output_type -> tradeforge.v1.GetTradesResponse
+	15, // 30: tradeforge.v1.TradeService.GetPositions:output_type -> tradeforge.v1.GetPositionsResponse
+	17, // 31: tradeforge.v1.TradeService.GetStrategies:output_type -> tradeforge.v1.GetStrategiesResponse
+	4,  // 32: tradeforge.v1.TradeService.UpdateStrategyStatus:output_type -> tradeforge.v1.UpdateStrategyStatusResponse
+	26, // [26:33] is the sub-list for method output_type
+	19, // [19:26] is the sub-list for method input_type
+	19, // [19:19] is the sub-list for extension type_name
+	19, // [19:19] is the sub-list for extension extendee
+	0,  // [0:19] is the sub-list for field type_name
 }
 
 func init() { file_tradeforge_v1_trade_proto_init() }
@@ -1561,7 +1682,7 @@ func file_tradeforge_v1_trade_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_tradeforge_v1_trade_proto_rawDesc), len(file_tradeforge_v1_trade_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   16,
+			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

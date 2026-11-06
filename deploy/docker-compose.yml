@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: tradeforge
+      POSTGRES_PASSWORD: tradeforge
+      POSTGRES_DB: tradeforge
+    ports:
+      - "5432:5432"
+    volumes:
+      - tradeforge-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tradeforge -d tradeforge"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  tradeforge:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        GOPROXY: ${GOPROXY:-https://proxy.golang.org,direct}
+    environment:
+      TRADEFORGE_GRPC_ADDR: ":9090"
+      TRADEFORGE_HTTP_ADDR: ":8080"
+      TRADEFORGE_DB_DSN: "postgres://tradeforge:tradeforge@postgres:5432/tradeforge?sslmode=disable"
+      TRADEFORGE_JWT_SECRET: "${TRADEFORGE_JWT_SECRET:-dev-secret-change-me}"
+      TRADEFORGE_SEED: "true"
+      TRADEFORGE_LOG_LEVEL: "info"
+    ports:
+      - "9090:9090"
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  tradeforge-pgdata:

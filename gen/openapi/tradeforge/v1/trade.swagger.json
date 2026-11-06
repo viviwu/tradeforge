@@ -285,6 +285,45 @@
         ]
       }
     },
+    "/v1/strategies/{strategyId}/status": {
+      "post": {
+        "summary": "UpdateStrategyStatus pauses, resumes, or stops a strategy. Admin only.",
+        "operationId": "TradeService_UpdateStrategyStatus",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateStrategyStatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "strategyId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/TradeServiceUpdateStrategyStatusBody"
+            }
+          }
+        ],
+        "tags": [
+          "TradeService"
+        ]
+      }
+    },
     "/v1/trades": {
       "get": {
         "summary": "GetTrades lists executions for the calling account.",
@@ -357,6 +396,18 @@
     }
   },
   "definitions": {
+    "TradeServiceUpdateStrategyStatusBody": {
+      "type": "object",
+      "properties": {
+        "requestId": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/v1StrategyStatus"
+        }
+      },
+      "description": "UpdateStrategyStatusRequest changes the lifecycle state of a strategy."
+    },
     "protobufAny": {
       "type": "object",
       "properties": {
@@ -749,6 +800,15 @@
         }
       },
       "description": "Trade is a single execution."
+    },
+    "v1UpdateStrategyStatusResponse": {
+      "type": "object",
+      "properties": {
+        "strategy": {
+          "$ref": "#/definitions/v1Strategy"
+        }
+      },
+      "description": "UpdateStrategyStatusResponse returns the updated strategy."
     }
   }
 }

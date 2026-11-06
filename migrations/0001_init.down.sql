@@ -1,0 +1,10 @@
+DROP TABLE IF EXISTS audit_logs;
+DROP TABLE IF EXISTS strategies;
+DROP TABLE IF EXISTS positions;
+DROP TABLE IF EXISTS trades;
+DROP SEQUENCE IF EXISTS trade_seq_seq;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS accounts;
+DROP TABLE IF EXISTS refresh_tokens;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS schema_migrations;

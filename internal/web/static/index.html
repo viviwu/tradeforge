@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Forge Console</title>
+<style>
+  :root { --bg:#0f1419; --panel:#171e26; --line:#27313d; --text:#e6edf3; --muted:#8b98a5; --accent:#f0a500; --green:#3fb950; --red:#f85149; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background:var(--bg); color:var(--text); }
+  header { display:flex; align-items:center; justify-content:space-between; padding:14px 22px; border-bottom:1px solid var(--line); background:var(--panel); }
+  header h1 { margin:0; font-size:18px; letter-spacing:.5px; }
+  header h1 span { color:var(--accent); }
+  .who { color:var(--muted); font-size:13px; }
+  main { max-width:1200px; margin:22px auto; padding:0 18px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:18px; margin-bottom:18px; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:end; }
+  label { display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--muted); }
+  input, select { background:#0b1015; color:var(--text); border:1px solid var(--line); border-radius:6px; padding:8px 10px; font-size:13px; min-width:110px; }
+  button { background:var(--accent); color:#1a1200; border:0; border-radius:6px; padding:9px 14px; font-weight:600; cursor:pointer; }
+  button.secondary { background:#243040; color:var(--text); }
+  button.danger { background:var(--red); color:#fff; }
+  button.small { padding:4px 9px; font-size:12px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; margin-top:12px; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th { color:var(--muted); font-weight:500; font-size:12px; }
+  .muted { color:var(--muted); }
+  .ok { color:var(--green); }
+  .bad { color:var(--red); }
+  .tabs { display:flex; gap:8px; margin-bottom:14px; }
+  .tabs button { background:#243040; color:var(--text); }
+  .tabs button.active { background:var(--accent); color:#1a1200; }
+  .hidden { display:none; }
+  #msg { min-height:20px; font-size:13px; margin-top:10px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Forge <span>Console</span></h1>
+  <div class="who" id="who">未登录</div>
+</header>
+<main>
+  <section class="card" id="loginCard">
+    <div class="row">
+      <label>用户名<input id="username" value="alice" autocomplete="username" /></label>
+      <label>密码<input id="password" type="password" value="alice123" autocomplete="current-password" /></label>
+      <button onclick="login()">登录</button>
+      <span class="muted" style="font-size:12px">演示账号：alice/alice123，管理员：admin/admin123</span>
+    </div>
+  </section>
+
+  <section id="app" class="hidden">
+    <div class="tabs">
+      <button class="active" data-tab="orders" onclick="switchTab('orders')">订单</button>
+      <button data-tab="positions" onclick="switchTab('positions')">持仓</button>
+      <button data-tab="strategies" onclick="switchTab('strategies')">策略</button>
+      <button data-tab="submit" onclick="switchTab('submit')">下单</button>
+      <button class="secondary" style="margin-left:auto" onclick="refreshAll()">刷新</button>
+      <button class="secondary" onclick="logout()">退出</button>
+    </div>
+
+    <section class="card tab" id="tab-orders">
+      <h3>订单</h3>
+      <table><thead><tr><th>订单号</th><th>标的</th><th>方向</th><th>类型</th><th>价格</th><th>数量</th><th>成交量</th><th>均价</th><th>状态</th><th>操作</th></tr></thead><tbody id="ordersBody"></tbody></table>
+    </section>
+
+    <section class="card tab hidden" id="tab-positions">
+      <h3>持仓</h3>
+      <table><thead><tr><th>标的</th><th>数量</th><th>冻结</th><th>均价</th><th>市值</th><th>浮动盈亏</th></tr></thead><tbody id="positionsBody"></tbody></table>
+    </section>
+
+    <section class="card tab hidden" id="tab-strategies">
+      <h3>策略</h3>
+      <table><thead><tr><th>名称</th><th>状态</th><th>参数</th><th>更新时间</th><th>操作</th></tr></thead><tbody id="strategiesBody"></tbody></table>
+    </section>
+
+    <section class="card tab hidden" id="tab-submit">
+      <h3>下单</h3>
+      <div class="row">
+        <label>标的<input id="symbol" value="AAPL" /></label>
+        <label>方向<select id="side"><option value="SIDE_BUY">买入</option><option value="SIDE_SELL">卖出</option></select></label>
+        <label>类型<select id="type"><option value="ORDER_TYPE_LIMIT">限价</option><option value="ORDER_TYPE_MARKET">市价</option></select></label>
+        <label>价格<input id="price" value="10000" /></label>
+        <label>数量<input id="qty" value="10" /></label>
+        <button onclick="submitOrder()">提交</button>
+      </div>
+      <p class="muted" style="font-size:12px">价格单位为最小货币单位（分），例如 10000 = 100.00。</p>
+    </section>
+  </section>
+  <div id="msg"></div>
+</main>
+
+<script>
+const state = { accessToken: "", refreshToken: "", user: null };
+const $ = (id) => document.getElementById(id);
+const msg = (text, bad) => { const el = $("msg"); el.textContent = text; el.className = bad ? "bad" : "ok"; };
+
+function setSession(data) {
+  state.accessToken = data.accessToken;
+  state.refreshToken = data.refreshToken;
+  state.user = data.user;
+  sessionStorage.setItem("forge.session", JSON.stringify(state));
+  $("who").textContent = `${state.user.username} (${state.user.role})`;
+  $("loginCard").classList.add("hidden");
+  $("app").classList.remove("hidden");
+}
+
+function restoreSession() {
+  const raw = sessionStorage.getItem("forge.session");
+  if (!raw) return;
+  try { const saved = JSON.parse(raw); if (saved.accessToken) { Object.assign(state, saved); $("who").textContent = `${state.user.username} (${state.user.role})`; $("loginCard").classList.add("hidden"); $("app").classList.remove("hidden"); refreshAll(); } } catch (_) {}
+}
+
+async function login() {
+  try {
+    const resp = await fetch("/v1/auth/login", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ username:$("username").value, password:$("password").value }) });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.message || "登录失败");
+    setSession(data);
+    msg("登录成功");
+    refreshAll();
+  } catch (e) { msg(e.message, true); }
+}
+
+async function logout() {
+  try { await api("/v1/auth/logout", "POST", { refreshToken: state.refreshToken }); } catch (_) {}
+  sessionStorage.removeItem("forge.session");
+  location.reload();
+}
+
+async function api(path, method = "GET", body) {
+  const resp = await fetch(path, { method, headers:{ "Content-Type":"application/json", "Authorization": `Bearer ${state.accessToken}` }, body: body ? JSON.stringify(body) : undefined });
+  const data = await resp.json().catch(() => ({}));
+  if (resp.status === 401) { sessionStorage.removeItem("forge.session"); location.reload(); throw new Error("登录已过期"); }
+  if (!resp.ok) throw new Error(data.message || `${resp.status}`);
+  return data;
+}
+
+function switchTab(name) {
+  document.querySelectorAll(".tab").forEach(el => el.classList.add("hidden"));
+  document.querySelectorAll(".tabs button[data-tab]").forEach(el => el.classList.toggle("active", el.dataset.tab === name));
+  $("tab-" + name).classList.remove("hidden");
+}
+
+async function refreshAll() {
+  try {
+    const [orders, positions, strategies] = await Promise.all([api("/v1/orders?pageSize=50"), api("/v1/positions"), api("/v1/strategies?pageSize=50")]);
+    renderOrders(orders.orders || []);
+    renderPositions(positions.positions || []);
+    renderStrategies(strategies.strategies || []);
+  } catch (e) { msg(e.message, true); }
+}
+
+function money(v) { const n = Number(v || 0); return (n / 100).toFixed(2); }
+
+function renderOrders(orders) {
+  const body = $("ordersBody");
+  body.innerHTML = orders.length ? orders.map(o => {
+    const active = !["ORDER_STATUS_FILLED","ORDER_STATUS_CANCELED","ORDER_STATUS_REJECTED"].includes(o.status);
+    return `<tr><td>${o.orderId}</td><td>${o.symbol}</td><td>${o.side}</td><td>${o.type}</td><td>${money(o.price)}</td><td>${o.quantity}</td><td>${o.filledQty}</td><td>${money(o.avgPrice)}</td><td>${o.status}</td><td>${active ? `<button class="danger small" onclick="cancelOrder('${o.orderId}')">撤单</button>` : ""}</td></tr>`;
+  }).join("") : `<tr><td colspan="10" class="muted">暂无订单</td></tr>`;
+}
+
+function renderPositions(positions) {
+  const body = $("positionsBody");
+  body.innerHTML = positions.length ? positions.map(p => `<tr><td>${p.symbol}</td><td>${p.quantity}</td><td>${p.frozenQty}</td><td>${money(p.avgPrice)}</td><td>${money(p.marketPrice)}</td><td>${money(p.unrealizedPnl)}</td></tr>`).join("") : `<tr><td colspan="6" class="muted">暂无持仓</td></tr>`;
+}
+
+function renderStrategies(strategies) {
+  const body = $("strategiesBody");
+  body.innerHTML = strategies.length ? strategies.map(s => {
+    const next = s.status === "STRATEGY_STATUS_RUNNING" ? "STRATEGY_STATUS_PAUSED" : "STRATEGY_STATUS_RUNNING";
+    const label = s.status === "STRATEGY_STATUS_RUNNING" ? "暂停" : "启动";
+    return `<tr><td>${s.name}</td><td>${s.status}</td><td>${s.paramsJson || "{}"}</td><td>${new Date(Number(s.updatedAtUnixNano) / 1e6).toLocaleString()}</td><td><button class="secondary small" onclick="setStrategy('${s.strategyId}','${next}')">${label}</button></td></tr>`;
+  }).join("") : `<tr><td colspan="5" class="muted">暂无策略</td></tr>`;
+}
+
+async function submitOrder() {
+  try {
+    const clientOrderId = "console-" + Date.now() + "-" + Math.floor(Math.random() * 1e6);
+    const body = { clientOrderId, symbol:$("symbol").value, side:$("side").value, type:$("type").value, price:$("price").value, quantity:$("qty").value };
+    if ($("type").value === "ORDER_TYPE_LIMIT") body.timeInForce = "TIME_IN_FORCE_GTC";
+    const result = await api("/v1/orders", "POST", body);
+    msg(`已提交：${result.orderId} ${result.status}`);
+    refreshAll();
+  } catch (e) { msg(e.message, true); }
+}
+
+async function cancelOrder(orderId) {
+  try { await api("/v1/orders:cancel", "POST", { orderId }); msg("撤单已提交"); refreshAll(); } catch (e) { msg(e.message, true); }
+}
+
+async function setStrategy(strategyId, status) {
+  try { await api(`/v1/strategies/${strategyId}/status`, "POST", { status }); msg("策略状态已更新"); refreshAll(); } catch (e) { msg(e.message, true); }
+}
+
+restoreSession();
+</script>
+</body>
+</html>

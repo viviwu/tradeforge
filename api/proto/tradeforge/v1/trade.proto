@@ -51,6 +51,18 @@ message Position {
   int64 updated_at_unix_nano = 8;
 }
 
+// UpdateStrategyStatusRequest changes the lifecycle state of a strategy.
+message UpdateStrategyStatusRequest {
+  string request_id = 1;
+  string strategy_id = 2;
+  StrategyStatus status = 3;
+}
+
+// UpdateStrategyStatusResponse returns the updated strategy.
+message UpdateStrategyStatusResponse {
+  Strategy strategy = 1;
+}
+
 // Strategy is the lightweight strategy state record.
 message Strategy {
   string strategy_id = 1;
@@ -208,6 +220,14 @@ service TradeService {
   rpc GetStrategies(GetStrategiesRequest) returns (GetStrategiesResponse) {
     option (google.api.http) = {
       get: "/v1/strategies"
+    };
+  }
+
+  // UpdateStrategyStatus pauses, resumes, or stops a strategy. Admin only.
+  rpc UpdateStrategyStatus(UpdateStrategyStatusRequest) returns (UpdateStrategyStatusResponse) {
+    option (google.api.http) = {
+      post: "/v1/strategies/{strategy_id}/status"
+      body: "*"
     };
   }
 }

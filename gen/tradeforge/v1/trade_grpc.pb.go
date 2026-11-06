@@ -19,12 +19,13 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	TradeService_SubmitOrder_FullMethodName   = "/tradeforge.v1.TradeService/SubmitOrder"
-	TradeService_CancelOrder_FullMethodName   = "/tradeforge.v1.TradeService/CancelOrder"
-	TradeService_GetOrders_FullMethodName     = "/tradeforge.v1.TradeService/GetOrders"
-	TradeService_GetTrades_FullMethodName     = "/tradeforge.v1.TradeService/GetTrades"
-	TradeService_GetPositions_FullMethodName  = "/tradeforge.v1.TradeService/GetPositions"
-	TradeService_GetStrategies_FullMethodName = "/tradeforge.v1.TradeService/GetStrategies"
+	TradeService_SubmitOrder_FullMethodName          = "/tradeforge.v1.TradeService/SubmitOrder"
+	TradeService_CancelOrder_FullMethodName          = "/tradeforge.v1.TradeService/CancelOrder"
+	TradeService_GetOrders_FullMethodName            = "/tradeforge.v1.TradeService/GetOrders"
+	TradeService_GetTrades_FullMethodName            = "/tradeforge.v1.TradeService/GetTrades"
+	TradeService_GetPositions_FullMethodName         = "/tradeforge.v1.TradeService/GetPositions"
+	TradeService_GetStrategies_FullMethodName        = "/tradeforge.v1.TradeService/GetStrategies"
+	TradeService_UpdateStrategyStatus_FullMethodName = "/tradeforge.v1.TradeService/UpdateStrategyStatus"
 )
 
 // TradeServiceClient is the client API for TradeService service.
@@ -45,6 +46,8 @@ type TradeServiceClient interface {
 	GetPositions(ctx context.Context, in *GetPositionsRequest, opts ...grpc.CallOption) (*GetPositionsResponse, error)
 	// GetStrategies lists strategies visible to the caller.
 	GetStrategies(ctx context.Context, in *GetStrategiesRequest, opts ...grpc.CallOption) (*GetStrategiesResponse, error)
+	// UpdateStrategyStatus pauses, resumes, or stops a strategy. Admin only.
+	UpdateStrategyStatus(ctx context.Context, in *UpdateStrategyStatusRequest, opts ...grpc.CallOption) (*UpdateStrategyStatusResponse, error)
 }
 
 type tradeServiceClient struct {
@@ -115,6 +118,16 @@ func (c *tradeServiceClient) GetStrategies(ctx context.Context, in *GetStrategie
 	return out, nil
 }
 
+func (c *tradeServiceClient) UpdateStrategyStatus(ctx context.Context, in *UpdateStrategyStatusRequest, opts ...grpc.CallOption) (*UpdateStrategyStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateStrategyStatusResponse)
+	err := c.cc.Invoke(ctx, TradeService_UpdateStrategyStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TradeServiceServer is the server API for TradeService service.
 // All implementations must embed UnimplementedTradeServiceServer
 // for forward compatibility.
@@ -133,6 +146,8 @@ type TradeServiceServer interface {
 	GetPositions(context.Context, *GetPositionsRequest) (*GetPositionsResponse, error)
 	// GetStrategies lists strategies visible to the caller.
 	GetStrategies(context.Context, *GetStrategiesRequest) (*GetStrategiesResponse, error)
+	// UpdateStrategyStatus pauses, resumes, or stops a strategy. Admin only.
+	UpdateStrategyStatus(context.Context, *UpdateStrategyStatusRequest) (*UpdateStrategyStatusResponse, error)
 	mustEmbedUnimplementedTradeServiceServer()
 }
 
@@ -160,6 +175,9 @@ func (UnimplementedTradeServiceServer) GetPositions(context.Context, *GetPositio
 }
 func (UnimplementedTradeServiceServer) GetStrategies(context.Context, *GetStrategiesRequest) (*GetStrategiesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetStrategies not implemented")
+}
+func (UnimplementedTradeServiceServer) UpdateStrategyStatus(context.Context, *UpdateStrategyStatusRequest) (*UpdateStrategyStatusResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateStrategyStatus not implemented")
 }
 func (UnimplementedTradeServiceServer) mustEmbedUnimplementedTradeServiceServer() {}
 func (UnimplementedTradeServiceServer) testEmbeddedByValue()                      {}
@@ -290,6 +308,24 @@ func _TradeService_GetStrategies_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TradeService_UpdateStrategyStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateStrategyStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TradeServiceServer).UpdateStrategyStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TradeService_UpdateStrategyStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TradeServiceServer).UpdateStrategyStatus(ctx, req.(*UpdateStrategyStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TradeService_ServiceDesc is the grpc.ServiceDesc for TradeService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -320,6 +356,10 @@ var TradeService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetStrategies",
 			Handler:    _TradeService_GetStrategies_Handler,
+		},
+		{
+			MethodName: "UpdateStrategyStatus",
+			Handler:    _TradeService_UpdateStrategyStatus_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
