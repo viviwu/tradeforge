@@ -112,7 +112,7 @@
 
 1. ~~补充 `docs/benchmarks.md`~~（已完成：登录/挂单/成交三路径基线，见 docs/benchmarks.md）。
 2. 视需要按 symbol 分片锁，提升多标的并发度。
-3. 建立 CI：`make proto` 后 diff 检查、`go vet`、单元与集成测试。
+3. ~~建立 CI~~（已完成：`.github/workflows/ci.yml`，proto 漂移检测 + race 测试已验证红/绿）。
 4. 评估市价单资金校验、盘口持久化与更细粒度限流。
 
 ### 3.2 阶段验收门禁
@@ -132,7 +132,7 @@
 | 编号 | 风险 | 影响 | 对策 | 状态 |
 |---|---|---|---|---|
 | R-001 | Go 官方代理与部分外网在开发机不可达 | 依赖下载/代码生成受阻 | 使用 `GOPROXY=https://goproxy.cn,direct`；buf 及 BSR 已验证可用 | 已解决 |
-| R-002 | 生成代码入库后与 proto 漂移 | 编译结果与契约不一致 | CI 执行 `make proto` 并检查 diff | 待建立 CI |
+| R-002 | 生成代码入库后与 proto 漂移 | 编译结果与契约不一致 | CI proto job 执行 `buf lint/generate` 后 `git diff --exit-code gen/` | 已解决 |
 | R-003 | 事件与 DB 不一致 | 订单/持仓状态错误 | 幂等消费 + 序列号 + 对账 | 设计已覆盖 |
 | R-004 | 慢消费者拖垮 Gateway | 推送延迟升高 | 独立缓冲 + 行情丢弃 + 背压指标 | 设计已覆盖 |
 | R-005 | 金额浮点误差 | 成交金额错误 | 全部使用 int64 最小单位 | 已约定 |
@@ -152,3 +152,4 @@
 | 2026-11-05 | ADR-003：撮合结果串行落库；启动恢复活动订单；新增单元测试与 PostgreSQL 集成测试 |
 | 2026-11-05 | 修复重复刷新 Token 竞态（原子消费 refresh token）；健康检查与 REST 联调通过 |
 | 2026-11-05 | 新增 `docs/benchmarks.md` P4 基线：登录 0 err，挂单 753 rps p50=10.6ms，成交 472 rps p50=34.2ms；串行锁为主要瓶颈 |
+| 2026-11-06 | 建立 GitHub Actions CI（proto 漂移检测 + build/vet/race 单测/集成测试），R-002 关闭；漂移检测经故意污染验证有效 |
