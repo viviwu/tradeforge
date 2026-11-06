@@ -424,7 +424,7 @@ func TestAuthRefreshRotation(t *testing.T) {
 	}
 	user := domain.User{
 		ID:           uuid.NewString(),
-		Username:     "alice",
+		Username:     "oms-auth-user",
 		PasswordHash: hash,
 		Role:         "viewer",
 		CreatedAt:    time.Now().UTC(),
@@ -435,7 +435,7 @@ func TestAuthRefreshRotation(t *testing.T) {
 	manager := auth.NewTokenManager("test-secret", time.Minute)
 	service := auth.NewService(f.st, manager, time.Hour, 4, 100, 100)
 
-	login, err := service.Login(f.ctx, "alice", "secret", "test")
+	login, err := service.Login(f.ctx, "oms-auth-user", "secret", "test")
 	if err != nil {
 		t.Fatal(err)
 	}
