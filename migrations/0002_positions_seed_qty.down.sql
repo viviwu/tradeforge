@@ -1,0 +1,1 @@
+ALTER TABLE positions DROP COLUMN IF EXISTS seed_qty;

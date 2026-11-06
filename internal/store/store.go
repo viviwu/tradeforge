@@ -78,6 +78,7 @@ type Store interface {
 	RevokeUserRefreshTokens(ctx context.Context, userID string) error
 
 	EnsureAccount(ctx context.Context, accountID string, initialCash int64) error
+	EnsurePosition(ctx context.Context, accountID, symbol string, quantity int64) error
 	GetAccount(ctx context.Context, accountID string) (domain.Account, error)
 	GetAccountForUpdate(ctx context.Context, accountID string) (domain.Account, error)
 	UpdateAccount(ctx context.Context, account domain.Account) error

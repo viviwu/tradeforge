@@ -113,7 +113,7 @@
 1. ~~补充 `docs/benchmarks.md`~~（已完成：登录/挂单/成交三路径基线，见 docs/benchmarks.md）。
 2. ~~按 symbol 分片锁~~（已完成：多标的成交吞吐 472→1172 rps，见 docs/benchmarks.md）。
 3. ~~建立 CI~~（已完成：`.github/workflows/ci.yml`，proto 漂移检测 + race 测试已验证红/绿）。
-4. 待做：订单簿持久化快照。（按账号限流已完成，见 2026-11-06 记录。）
+4. 订单簿持久化快照：决策不做（2026-11-06 用户拍板——撮合系统仅为验证委托到订单回报链路的托底件，不再投入交易所侧深化；当前 DB 即快照方案够用）。
 
 ### 3.2 阶段验收门禁
 
@@ -157,3 +157,6 @@
 | 2026-11-06 | 市价买预算冻结：按最优卖价估算冻结额（存于订单 price），settle/release 与限价单统一口径，防止透支；空盘口直接拒绝 |
 | 2026-11-06 | CLI 新增 `forge stress order`；修复 CLI 枚举显示（int32 enum 误用 string() 转换，改用 .String()） |
 | 2026-11-06 | 按账号限流上线：下单/撤单（默认 50 rps/burst 100）、查询（200/400）令牌桶 + 每账号订阅并发上限（16），超配 429 并计入 `tradeforge_rate_limited_total`；验证 300 单并发压得 193 拒绝，压测配置可放宽 |
+| 2026-11-06 | 联调便利性：`scripts/e2e.sh` 一条命令全链路自检（登录→挂单→self-cross 成交→订单/成交/订阅回报→撤单），并接入 CI go job；项目定位明确为"渠道侧链路验证托底" |
+| 2026-11-06 | 种子账号初始库存 `TRADEFORGE_INITIAL_POSITION`（默认 10000 股/标的），迁移 0002 `positions.seed_qty` 作为对账基线（实际=基线+成交净额），否则 seeded 库存会被对账误报漂移 |
+| 环境备注 | 本机 shell 环境变量不跨命令保留：每次 bash 需显式 `export GOPROXY=https://goproxy.cn,direct GOMODCACHE=/tmp/tf-gomod GOPATH=/tmp/tf-gopath GOCACHE=/tmp/tf-gocache`，否则 go 命令走 proxy.golang.org 超时 |

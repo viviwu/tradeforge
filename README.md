@@ -71,6 +71,9 @@ bin/forge query orders
 bin/forge query positions
 bin/forge sub market --symbol AAPL
 bin/forge sub orders
+
+# 全链路自检（登录→挂单→成交→回报订阅→撤单，需服务端已启动）
+scripts/e2e.sh
 ```
 
 价格与金额均为最小单位整数（示例中 `10000` 显示为 `100.00`）。CLI 支持 `--output table|json`，Token 缓存在 `~/.config/forge/config.json`（`FORGE_CONFIG` 可覆盖）。
@@ -99,6 +102,8 @@ curl -s http://localhost:8080/v1/orders -H "Authorization: Bearer $TOKEN"
 | `TRADEFORGE_JWT_SECRET` | `dev-secret-change-me` | 生产必须替换 |
 | `TRADEFORGE_SEED` | `true` | 是否写入演示用户与策略 |
 | `TRADEFORGE_SYMBOLS` | `AAPL,MSFT,TSLA,NVDA` | 可交易标的 |
+| `TRADEFORGE_INITIAL_CASH` | `100000000` | 种子账号初始可用资金（最小单位） |
+| `TRADEFORGE_INITIAL_POSITION` | `10000` | 种子账号初始持仓股数（0 关闭，便于先卖后买地测试成交链路） |
 | `TRADEFORGE_ORDER_RPS` / `TRADEFORGE_ORDER_BURST` | `50` / `100` | 每账号每秒下单/撤单数（0 关闭限流） |
 | `TRADEFORGE_QUERY_RPS` / `TRADEFORGE_QUERY_BURST` | `200` / `400` | 每账号每秒交易查询数（0 关闭限流） |
 | `TRADEFORGE_MAX_STREAMS` | `16` | 每账号最大并发订阅数（0 不限制） |

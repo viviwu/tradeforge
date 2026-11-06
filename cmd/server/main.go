@@ -59,7 +59,7 @@ func run() error {
 		return err
 	}
 	if cfg.Seed {
-		if err := bootstrap.Seed(ctx, st, logger, cfg.BcryptCost, cfg.InitialCash); err != nil {
+		if err := bootstrap.Seed(ctx, st, logger, cfg.BcryptCost, cfg.InitialCash, cfg.Symbols, cfg.InitialPos); err != nil {
 			return err
 		}
 	}

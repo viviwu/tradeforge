@@ -18,6 +18,7 @@ type Config struct {
 	BcryptCost  int
 	Seed        bool
 	InitialCash int64
+	InitialPos  int64
 	Symbols     []string
 	MDInterval  time.Duration
 	LogLevel    string
@@ -45,6 +46,7 @@ func Load() Config {
 		BcryptCost:         envInt("TRADEFORGE_BCRYPT_COST", 10),
 		Seed:               envBool("TRADEFORGE_SEED", true),
 		InitialCash:        envInt64("TRADEFORGE_INITIAL_CASH", 100_000_000),
+		InitialPos:         envInt64("TRADEFORGE_INITIAL_POSITION", 10_000),
 		Symbols:            splitCSV(env("TRADEFORGE_SYMBOLS", "AAPL,MSFT,TSLA,NVDA")),
 		MDInterval:         envDuration("TRADEFORGE_MD_INTERVAL", 200*time.Millisecond),
 		LogLevel:           env("TRADEFORGE_LOG_LEVEL", "info"),

@@ -19,7 +19,7 @@ type demoUser struct {
 	role     string
 }
 
-func Seed(ctx context.Context, st store.Store, logger *slog.Logger, bcryptCost int, initialCash int64) error {
+func Seed(ctx context.Context, st store.Store, logger *slog.Logger, bcryptCost int, initialCash int64, symbols []string, initialPos int64) error {
 	users := []demoUser{
 		{username: "admin", password: "admin123", role: "admin"},
 		{username: "alice", password: "alice123", role: "viewer"},
@@ -48,6 +48,11 @@ func Seed(ctx context.Context, st store.Store, logger *slog.Logger, bcryptCost i
 		}
 		if err := st.EnsureAccount(ctx, user.ID, initialCash); err != nil {
 			return err
+		}
+		for _, symbol := range symbols {
+			if err := st.EnsurePosition(ctx, user.ID, symbol, initialPos); err != nil {
+				return err
+			}
 		}
 		if demo.username == "alice" {
 			if err := seedStrategies(ctx, st, user.ID); err != nil {

@@ -156,6 +156,19 @@ func (s *Postgres) EnsureAccount(ctx context.Context, accountID string, initialC
 	return err
 }
 
+func (s *Postgres) EnsurePosition(ctx context.Context, accountID, symbol string, quantity int64) error {
+	if quantity <= 0 {
+		return nil
+	}
+	_, err := s.q().Exec(ctx,
+		`INSERT INTO positions (account_id, symbol, quantity, avg_price, frozen_qty, market_price, seed_qty, updated_at)
+		 VALUES ($1,$2,$3,0,0,0,$3,now())
+		 ON CONFLICT (account_id, symbol) DO NOTHING`,
+		accountID, symbol, quantity,
+	)
+	return err
+}
+
 func (s *Postgres) GetAccount(ctx context.Context, accountID string) (domain.Account, error) {
 	return scanAccount(s.q().QueryRow(ctx,
 		`SELECT account_id, available_cash, frozen_cash, updated_at FROM accounts WHERE account_id=$1`, accountID))
@@ -665,14 +678,14 @@ func (s *Postgres) ReconcileOrderFills(ctx context.Context) ([]OrderMismatch, er
 func (s *Postgres) ReconcilePositions(ctx context.Context) ([]PositionMismatch, error) {
 	rows, err := s.q().Query(ctx,
 		`SELECT COALESCE(p.account_id, t.account_id), COALESCE(p.symbol, t.symbol),
-		        COALESCE(p.quantity,0), COALESCE(t.quantity,0)
+		        COALESCE(p.quantity,0), COALESCE(p.seed_qty,0) + COALESCE(t.quantity,0)
 		 FROM positions p
 		 FULL JOIN (
 		   SELECT account_id, symbol,
 		          SUM(CASE WHEN side='BUY' THEN quantity ELSE -quantity END) AS quantity
 		   FROM trades GROUP BY account_id, symbol
 		 ) t USING (account_id, symbol)
-		 WHERE COALESCE(p.quantity,0) <> COALESCE(t.quantity,0)`)
+		 WHERE COALESCE(p.quantity,0) <> COALESCE(p.seed_qty,0) + COALESCE(t.quantity,0)`)
 	if err != nil {
 		return nil, err
 	}
