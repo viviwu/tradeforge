@@ -64,6 +64,12 @@ jobs:
       - name: Integration tests (race)
         run: go test -tags=integration -race -count=1 ./internal/oms -v
       - name: E2E full-chain smoke
+        env:
+          TRADEFORGE_GRPC_ADDR: 127.0.0.1:19090
+          TRADEFORGE_HTTP_ADDR: 127.0.0.1:18080
+          TRADEFORGE_DB_DSN: postgres://tradeforge:tradeforge@localhost:55432/tradeforge?sslmode=disable
+          TRADEFORGE_JWT_SECRET: ci-e2e
+          TRADEFORGE_BCRYPT_COST: 4
         run: |
           set -e
           go build -o /tmp/tf-server ./cmd/server
