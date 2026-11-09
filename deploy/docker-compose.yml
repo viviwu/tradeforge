@@ -36,5 +36,25 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  broker-stub:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        GOPROXY: ${GOPROXY:-https://proxy.golang.org,direct}
+    entrypoint: ["broker-stub"]
+    environment:
+      BROKER_STUB_LISTEN_ADDR: ":50053"
+      BROKER_STUB_METRICS_ADDR: ":50054"
+      BROKER_STUB_UPSTREAM_ADDR: "tradeforge:9090"
+      BROKER_STUB_USER: "${BROKER_STUB_USER:-alice}"
+      BROKER_STUB_PASS: "${BROKER_STUB_PASS:-alice123}"
+    ports:
+      - "50053:50053"
+      - "50054:50054"
+    depends_on:
+      - tradeforge
+    restart: unless-stopped
+
 volumes:
   tradeforge-pgdata:

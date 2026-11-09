@@ -81,3 +81,19 @@ jobs:
             sleep 1
           done
           ./scripts/e2e.sh
+      - name: E2E broker-gateway chain
+        env:
+          GOPROXY: https://proxy.golang.org,direct
+          TRADEFORGE_BCRYPT_COST: 4
+        run: |
+          set -e
+          # Keep the two chains on separate databases when a client is available;
+          # e2e-broker.sh also auto-creates the database if psql is installed.
+          if command -v psql >/dev/null 2>&1; then
+            export PGPASSWORD=tradeforge
+            psql -h localhost -p 55432 -U tradeforge -d postgres -tc \
+              "SELECT 1 FROM pg_database WHERE datname='tradeforge_bgw'" | grep -q 1 \
+              || psql -h localhost -p 55432 -U tradeforge -d postgres -c "CREATE DATABASE tradeforge_bgw"
+            export BGW_TEST_DB_DSN="postgres://tradeforge:tradeforge@localhost:55432/tradeforge_bgw?sslmode=disable"
+          fi
+          ./scripts/e2e-broker.sh
