@@ -64,7 +64,8 @@
 | M3 | P2 持仓与订阅 | 持仓投影、事件订阅、TradeApi 重连 | 订阅实时；断线恢复；对账一致 | 2 周 | 已完成 |
 | M4 | P3 行情与 Forge Console | 行情 Provider、行情订阅、REST、页面 | 行情订阅可用；Console 可查可撤 | 2 周 | 已完成 |
 | M5 | P4 压测与加固 | 限流、背压、metrics、对账、故障恢复 | 达到 NFR 目标；重启后数据一致 | 1-2 周 | 已完成（快照决策不做） |
-| M6 | P5 可选扩展 | 拆分服务、NATS、L2 行情、策略沙箱 | 按兴趣选择 | 持续 | 未开始 |
+| M6 | 渠道对接（线路1：网关化） | `broker-gateway.v1` 契约 + broker-stub（模拟券商通道）+ 渠道视角 e2e | `scripts/e2e-broker.sh` 全链路 PASS；契约冻结 | 1 周 | 进行中 |
+| M7 | P5 可选扩展（搁置） | 拆分服务、NATS、L2 行情、策略沙箱 | 与"链路验证托底件"定位不符，按需重启 | - | 搁置 |
 
 ### 2.1 M1（P0）任务清单
 
@@ -108,12 +109,40 @@
 
 ## 3. 计划与验收
 
-### 3.1 下一步执行顺序（M5）
+### 3.1 下一步执行顺序（M6：渠道对接）
 
-1. ~~补充 `docs/benchmarks.md`~~（已完成：登录/挂单/成交三路径基线，见 docs/benchmarks.md）。
-2. ~~按 symbol 分片锁~~（已完成：多标的成交吞吐 472→1172 rps，见 docs/benchmarks.md）。
-3. ~~建立 CI~~（已完成：`.github/workflows/ci.yml`，proto 漂移检测 + race 测试已验证红/绿）。
-4. 订单簿持久化快照：决策不做（2026-11-06 用户拍板——撮合系统仅为验证委托到订单回报链路的托底件，不再投入交易所侧深化；当前 DB 即快照方案够用）。
+**背景与定位**（2026-11-06 用户拍板）：
+- 撮合系统仅为验证「委托→订单回报」链路的托底件，交易所侧不再深化（快照决策不做）。
+- 用户手上的券商交易渠道 API/SDK 均为 C++（Linux）。架构选定**线路 1：网关化**——每个券商 SDK 封装为独立进程（薄网关），对上游以统一网络契约（gRPC）对接；渠道核心主体语言沿用 Go。
+- 方向澄清：**券商适配进程是 BrokerGateway 契约的 server**（对上游渠道核心），对下游（券商柜台）才是 SDK client。无中央网关聚合服务；"跨券商统一接入点"列为将来可选演进。
+- 线路 2（全 C++/进程内桥接）、线路 3（cgo 同进程混编）已评估放弃：后者将 Go runtime 与 C++ 回调线程、构建链绑死，维护代价远超收益。
+
+**架构图**：
+
+```
+渠道核心（用户主项目，未来）
+   │ broker-gateway.v1（gRPC）
+broker-stub（模拟券商通道 = 翻译进程）
+   │ TradeApi SDK（pkg/tradeapi：登录/刷新/重连/补发全自动）
+TradeForge server（现状完全不动）
+```
+
+- **关键架构修正**：broker-stub **不直连进程内 OMS**（撮合簿是 server 内存态），而是与真网关同构——上游实现 BrokerGateway server，下游通过 TradeApi SDK 顶着 TradeForge。现有 server/CLI/Console 零改动。
+
+**任务拆解**：
+
+| 步骤 | 内容 | 交付物/验收 |
+|---|---|---|
+| M6.1 | 契约定义 | `api/proto/brokergateway/v1/brokergateway.proto`：Attach（版本协商+seq 游标）、Heartbeat、SubmitOrder/CancelOrder（幂等 RequestId）、QueryOrders/QueryTrades/QueryAccount、SubscribeReports（stream：ReportEvent{seq, oneof 订单/成交/资金快照, ext_json}）；buf lint/generate 绿 |
+| M6.2 | Stub 网关 | `internal/brokergw/service.go`（BrokerGatewayServer 实现，内部持 TradeApi.Client；网关本地 seq + 会话内存 ring 补发）+ `cmd/broker-stub`（env：监听地址/上游地址/上游账号）+ compose 新容器 + 单测（seq 分配/补发/幂等映射）|
+| M6.3 | 渠道视角验收链路 | `cmd/bgw-probe`（最小渠道核心客户端：Attach→排单→对冲成交→收 FILLED 订单回报+成交回报推送→撤单）+ `scripts/e2e-broker.sh`（server+stub+probe 三进程编排）+ CI 新增一步（默认接入，本地跑绿后挂钩）；**不并入 scripts/e2e.sh**（两链路正交）|
+| M6.4 | 文档收尾 | `docs/broker-gateway.md`（契约语义、seq/重连规则、账号映射说明、券商差异登记表首条）+ README 快速开始 + 本台账验收记录 |
+
+**已确认的语义决策**（用户 2026-11-06 未提异议，按默认执行）：
+1. **seq 语义**：网关本地 seq + 会话内内存补发；渠道核心重启后靠查询补状态。跨进程重启持久化补发列为将来可选项。
+2. **账号映射**：stub 以单一配置账号（默认 alice）连上游，所有委托归属该柜台账号；多客户号映射等真实券商阶段再做。
+3. **差异逃生舱**：`ext`（JSON 字符串）吸收单券商怪癖；差异登记表随真券商接入扩展。
+4. C++ 生成与 CMake 网关模板在第一个真实券商接入时启动（M7 之后，不阻塞 M6）。
 
 ### 3.2 阶段验收门禁
 
@@ -136,6 +165,8 @@
 | R-003 | 事件与 DB 不一致 | 订单/持仓状态错误 | 幂等消费 + 序列号 + 对账 | 设计已覆盖 |
 | R-004 | 慢消费者拖垮 Gateway | 推送延迟升高 | 独立缓冲 + 行情丢弃 + 背压指标 | 设计已覆盖 |
 | R-005 | 金额浮点误差 | 成交金额错误 | 全部使用 int64 最小单位 | 已约定 |
+| R-006 | 券商 SDK 全为 C++（Linux），渠道核心沿用 Go | 跨语言/跨进程对接复杂度 | 线路 1 网关化：每个券商一个薄适配进程做 BrokerGateway 契约的 server，上游对接面全部同一契约；TradeForge 以 broker-stub 扮演第一个模拟券商 | 选型已定（M6 执行） |
+| R-007 | 各券商回报语义/字段参差 | 契约被单券商怪癖污染 | 主契约保持通用，`ext`（JSON）逃生舱 + 差异登记表管控 | 设计已覆盖 |
 
 ---
 
@@ -160,3 +191,5 @@
 | 2026-11-06 | 联调便利性：`scripts/e2e.sh` 一条命令全链路自检（登录→挂单→self-cross 成交→订单/成交/订阅回报→撤单），并接入 CI go job；项目定位明确为"渠道侧链路验证托底" |
 | 2026-11-06 | 种子账号初始库存 `TRADEFORGE_INITIAL_POSITION`（默认 10000 股/标的），迁移 0002 `positions.seed_qty` 作为对账基线（实际=基线+成交净额），否则 seeded 库存会被对账误报漂移 |
 | 环境备注 | 本机 shell 环境变量不跨命令保留：每次 bash 需显式 `export GOPROXY=https://goproxy.cn,direct GOMODCACHE=/tmp/tf-gomod GOPATH=/tmp/tf-gopath GOCACHE=/tmp/tf-gocache`，否则 go 命令走 proxy.golang.org 超时 |
+| 2026-11-06 | M5 收官：P4 状态改为"已完成（快照决策不做）"；快照列入决策不做 |
+| 2026-11-06 | 渠道对接选型拍板：线路 1 网关化（券商 C++ SDK 各封装为独立 BrokerGateway server 进程，渠道核心 Go，上游统一契约）；broker-stub 与真网关同构（报 TradeApi SDK 连 TradeForge，不直连 OMS）；三方案对比与语义决策记入 §3.1；新增 R-006/R-007；M6 启动，M7（P5 可选扩展）搁置 |
