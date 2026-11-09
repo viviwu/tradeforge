@@ -1,0 +1,51 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "broker gateway 契约 v1。",
+    "description": "本契约面向“渠道核心 ↔ 券商适配网关”之间的统一对接：\n- 适配网关：每个券商柜台各一个独立进程（通常由券商 C++ SDK 驱动），对上游实现本契约为 gRPC server；\n  broker-stub 是第一个模拟实现，其下游为 TradeForge 模拟交易所。\n- 渠道核心：作为 gRPC client 按配置列表接入多个网关，多通道选择/路由属于渠道核心职责。\n\n语义基线（与已实现柜台核对的结论，详见 docs/broker-gateway.md 差异登记表）：\n- 下单/撤单为“受理 ack + 状态演练”模式：本调用返回受理结果，终态通过回报推送传递；\n- 契约以 client_order_id 为订单主键（渠道核心生成），柜台侧原生键位（如华锐 cl_ord_no、\n  金证合同序号）由网关维护映射，并作为 exchange_order_id 只读透传；\n- 回报推送为订阅制（对齐金证 Topic 订阅；华锐登录即推的模型由网关内部消化）；\n- 事件信封 seq 由网关本地分配并单调递增，Attach 返回当前游标；会话内断线重连按游标补发，\n  客户端重启后的状态恢复建议走查询补齐（跨进程持久化补发为将来可选项）；\n- 价格/金额统一 int64 定标：1 unit = 0.0001 元；最小变动价位（tick）、涨跌停等业务规则\n  不属于报文格式，由网关与渠道核心依 QuerySecurityInfo 的证券档案执行校验。",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "BrokerGatewayService",
+      "description": "BrokerGatewayService 是渠道核心与券商适配网关之间的统一事务接口。"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {},
+  "definitions": {
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    }
+  }
+}

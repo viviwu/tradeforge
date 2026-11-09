@@ -1,0 +1,365 @@
+syntax = "proto3";
+
+// broker gateway 契约 v1。
+//
+// 本契约面向“渠道核心 ↔ 券商适配网关”之间的统一对接：
+// - 适配网关：每个券商柜台各一个独立进程（通常由券商 C++ SDK 驱动），对上游实现本契约为 gRPC server；
+//   broker-stub 是第一个模拟实现，其下游为 TradeForge 模拟交易所。
+// - 渠道核心：作为 gRPC client 按配置列表接入多个网关，多通道选择/路由属于渠道核心职责。
+//
+// 语义基线（与已实现柜台核对的结论，详见 docs/broker-gateway.md 差异登记表）：
+// - 下单/撤单为“受理 ack + 状态演练”模式：本调用返回受理结果，终态通过回报推送传递；
+// - 契约以 client_order_id 为订单主键（渠道核心生成），柜台侧原生键位（如华锐 cl_ord_no、
+//   金证合同序号）由网关维护映射，并作为 exchange_order_id 只读透传；
+// - 回报推送为订阅制（对齐金证 Topic 订阅；华锐登录即推的模型由网关内部消化）；
+// - 事件信封 seq 由网关本地分配并单调递增，Attach 返回当前游标；会话内断线重连按游标补发，
+//   客户端重启后的状态恢复建议走查询补齐（跨进程持久化补发为将来可选项）；
+// - 价格/金额统一 int64 定标：1 unit = 0.0001 元；最小变动价位（tick）、涨跌停等业务规则
+//   不属于报文格式，由网关与渠道核心依 QuerySecurityInfo 的证券档案执行校验。
+package brokergateway.v1;
+
+option go_package = "github.com/viviwu/tradeforge/gen/brokergateway/v1;brokergatewayv1";
+
+// Side 表示买卖方向。
+enum Side {
+  SIDE_UNSPECIFIED = 0;
+  SIDE_BUY = 1;
+  SIDE_SELL = 2;
+}
+
+// OrderType 表示委托类型；v0 仅覆盖现货集中竞价的限价/市价。
+enum OrderType {
+  ORDER_TYPE_UNSPECIFIED = 0;
+  // 限价委托。
+  ORDER_TYPE_LIMIT = 1;
+  // 市价委托（柜台映射为该柜台支持的市价形式，细节进差异登记表）。
+  ORDER_TYPE_MARKET = 2;
+}
+
+// TimeInForce 表示有效期限。
+enum TimeInForce {
+  TIME_IN_FORCE_UNSPECIFIED = 0;
+  // 当日有效（A股现货默认）。
+  TIME_IN_FORCE_DAY = 1;
+  // 到期撤销；柜台不支持时网关按差异登记表映射。
+  TIME_IN_FORCE_GTC = 2;
+  // 立即执行否则撤销。
+  TIME_IN_FORCE_IOC = 3;
+  TIME_IN_FORCE_FOK = 4;
+}
+
+// OrderStatus 是契约统一订单状态机。柜台原状态码由网关映射，无法精确映射时
+// 使用语义最近的状态并附带原始描述。
+enum OrderStatus {
+  ORDER_STATUS_UNSPECIFIED = 0;
+  // 已提交、待网关受理/待报盘（华锐 kUnSend、金证待报类状态归并于此）。
+  ORDER_STATUS_PENDING = 1;
+  // 已报盘待交易所确认。
+  ORDER_STATUS_UNSEND = 2;
+  // 已受理待交易所确认（受理后的基础态，等价现有模拟所的 PENDING_NEW）。
+  ORDER_STATUS_PENDING_NEW = 3;
+  // 交易所已确认。
+  ORDER_STATUS_ACCEPTED = 4;
+  ORDER_STATUS_PARTIALLY_FILLED = 5;
+  ORDER_STATUS_FILLED = 6;
+  // 已提交撤单请求、等待撤单成交确认。
+  ORDER_STATUS_WAIT_CANCEL = 7;
+  ORDER_STATUS_CANCELED = 8;
+  ORDER_STATUS_REJECTED = 9;
+}
+
+// TradingStatus 表示标的是否可交易。
+enum TradingStatus {
+  TRADING_STATUS_UNSPECIFIED = 0;
+  TRADING_STATUS_NORMAL = 1;
+  // 停牌/临时禁止交易。
+  TRADING_STATUS_SUSPENDED = 2;
+  TRADING_STATUS_DELISTED = 3;
+}
+
+// AttachRequest 建立网关会话：渠道核心在每次连接（含断线重连）后首先调用。
+message AttachRequest {
+  // client_version 用于契约/两端版本协商。
+  string client_version = 1;
+  string ext_json = 2;
+}
+
+// AttachResponse 返回网关信息、当前回报 seq 游标与柜台账户清单。
+message AttachResponse {
+  // server_version 为网关实现版本。
+  string server_version = 1;
+  // seq_cursor 为回报流当前游标；SubscribeReports 从该值起补发。
+  int64 seq_cursor = 2;
+  // accounts 为柜台账户清单（furst 资金账号 × 各市场股东账户两层）。
+  repeated GatewayAccount accounts = 3;
+  string ext_json = 4;
+}
+
+// GatewayAccount 描述一个资金账号及其下属股东账户。
+message GatewayAccount {
+  string fund_account = 1;
+  repeated GatewayTradeAccount trade_accounts = 2;
+  string ext_json = 3;
+}
+
+// GatewayTradeAccount 描述某市场下的股东账户。
+message GatewayTradeAccount {
+  string trade_account = 1;
+  // market 为市场标识（如 SH/SZ；柜台原码表由网关映射）。
+  string market = 2;
+  string ext_json = 3;
+}
+
+// HeartbeatRequest 为应用层心跳。
+message HeartbeatRequest {
+  int64 request_id = 1;
+  string ext_json = 2;
+}
+
+// HeartbeatResponse 返回心跳应答与当前游标，供渠道核心探测积压。
+message HeartbeatResponse {
+  int64 request_id = 1;
+  int64 seq_cursor = 2;
+  int64 server_time_unix_nano = 3;
+  string ext_json = 4;
+}
+
+// SubmitOrderRequest 提交一笔现货集中竞价委托。
+message SubmitOrderRequest {
+  int64 request_id = 1;
+  // client_order_id 由渠道核心生成，契约订单主键（幂等键）。
+  string client_order_id = 2;
+  string fund_account = 3;
+  string trade_account = 4;
+  string market = 5;
+  string symbol = 6;
+  Side side = 7;
+  OrderType order_type = 8;
+  // price_u 为委托价格，1 unit = 0.0001 元；市价单可留空（柜台差异见登记表）。
+  int64 price_u = 9;
+  // qty 为申报数量（股）；柜台手数约束由渠道核心依证券档案预校验。
+  int64 qty = 10;
+  TimeInForce tif = 11;
+  string ext_json = 12;
+}
+
+// SubmitOrderResponse 返回受理结果（非终态）。
+message SubmitOrderResponse {
+  int64 request_id = 1;
+  string client_order_id = 2;
+  // accepted=false 表示受理层即拒绝（参数/风控/组合规则），顺序上先于报盘；
+  // 真正的柜台/交易所拒单仍以 ReportEvent(REJECTED) 下发。
+  bool accepted = 3;
+  string reject_reason = 4;
+  // status 为受理时状态，通常 PENDING/UNSEND。
+  OrderStatus status = 5;
+  string ext_json = 6;
+}
+
+// CancelOrderRequest 按 client_order_id 撤单。
+message CancelOrderRequest {
+  int64 request_id = 1;
+  string client_order_id = 2;
+  string ext_json = 3;
+}
+
+// CancelOrderResponse 返回撤单受理结果（非终态）。
+message CancelOrderResponse {
+  int64 request_id = 1;
+  string client_order_id = 2;
+  // accepted=false 表示撤单请求未受理（如委托已终态、柜台拒绝）。
+  bool accepted = 3;
+  string reject_reason = 4;
+  OrderStatus status = 5;
+  string ext_json = 6;
+}
+
+// QueryFilter 为查询公共过滤条件；page_token 为上次响应回传的续读游标。
+message QueryFilter {
+  string fund_account = 1;
+  string market = 2;
+  string symbol = 3;
+  string client_order_id = 4;
+  int32 page_size = 5;
+  string page_token = 6;
+  string ext_json = 7;
+}
+
+// BrokerOrder 为委托全量视图（查询与订单回报共用）。
+message BrokerOrder {
+  string client_order_id = 1;
+  string exchange_order_id = 2;
+  string fund_account = 3;
+  string trade_account = 4;
+  string market = 5;
+  string symbol = 6;
+  Side side = 7;
+  OrderType order_type = 8;
+  TimeInForce tif = 9;
+  int64 price_u = 10;
+  int64 qty = 11;
+  int64 filled_qty = 12;
+  int64 avg_fill_price_u = 13;
+  OrderStatus status = 14;
+  string reject_reason = 15;
+  int64 created_unix_nano = 16;
+  int64 updated_unix_nano = 17;
+  string ext_json = 18;
+}
+
+// QueryOrdersRequest 查询当日委托。
+message QueryOrdersRequest {
+  QueryFilter filter = 1;
+}
+
+// QueryOrdersResponse 返回当日委托列表。
+message QueryOrdersResponse {
+  repeated BrokerOrder orders = 1;
+  string next_page_token = 2;
+  // is_last 为 true 时表示本页之后无更多数据。
+  bool is_last = 3;
+}
+
+// BrokerTrade 为成交明细。
+message BrokerTrade {
+  // trade_id 为柜台成交流水标识（金证 szMatchedSn、华锐 exec_id 类字段映射）。
+  string trade_id = 1;
+  string client_order_id = 2;
+  string exchange_order_id = 3;
+  string fund_account = 4;
+  string trade_account = 5;
+  string market = 6;
+  string symbol = 7;
+  Side side = 8;
+  int64 price_u = 9;
+  int64 qty = 10;
+  // amount_u 为成交金额（1 unit = 0.0001 元）；柜台附加费用明细进 ext_json。
+  int64 amount_u = 11;
+  int64 ts_unix_nano = 12;
+  string ext_json = 13;
+}
+
+// QueryTradesRequest 查询当日成交。
+message QueryTradesRequest {
+  QueryFilter filter = 1;
+}
+
+// QueryTradesResponse 返回当日成交列表。
+message QueryTradesResponse {
+  repeated BrokerTrade trades = 1;
+  string next_page_token = 2;
+  bool is_last = 3;
+}
+
+// BrokerPosition 为持仓视图。
+message BrokerPosition {
+  string trade_account = 1;
+  string market = 2;
+  string symbol = 3;
+  // qty 为持仓总量；available_qty 为可用（未冻结）数量。
+  int64 qty = 4;
+  int64 available_qty = 5;
+  int64 avg_cost_u = 6;
+  string ext_json = 7;
+}
+
+// QueryAccountRequest 查询资金与持仓。
+message QueryAccountRequest {
+  int64 request_id = 1;
+  string fund_account = 2;
+  string ext_json = 3;
+}
+
+// QueryAccountResponse 返回资金快照与持仓列表。
+message QueryAccountResponse {
+  AccountSnapshot snapshot = 1;
+}
+
+// AccountSnapshot 为资金与持仓快照（SFund 查询结果与成交回报附带快照共用）。
+message AccountSnapshot {
+  string fund_account = 1;
+  // 均为 1 unit = 0.0001 元。
+  int64 available_cash_u = 2;
+  int64 frozen_cash_u = 3;
+  repeated BrokerPosition positions = 4;
+  int64 ts_unix_nano = 5;
+  string ext_json = 6;
+}
+
+// QuerySecurityInfoRequest 查询单只标的的当日证券档案。
+message QuerySecurityInfoRequest {
+  int64 request_id = 1;
+  string trade_account = 2;
+  string market = 3;
+  string symbol = 4;
+  string ext_json = 5;
+}
+
+// SecurityInfo 为标的服务档案；渠道核心据此做下单前预校验
+// （tick 对齐、涨跌停、停牌、上限），网关受理后仍有柜台侧校验兜底。
+message SecurityInfo {
+  string market = 1;
+  string symbol = 2;
+  TradingStatus trading_status = 3;
+  // price_tick_u 为最小变动价位，同一 1e-4 定标（股票 0.01 → 100）。
+  int64 price_tick_u = 4;
+  // lot_size 为最小申报单位（手；股票为 100）。
+  int64 lot_size = 5;
+  // 涨跌停价，同一 1e-4 定标。
+  int64 limit_up_u = 6;
+  int64 limit_down_u = 7;
+  // 单笔最大买卖数量，0 表示柜台未提供/不限。
+  int64 max_buy_qty = 8;
+  int64 max_sell_qty = 9;
+  string ext_json = 10;
+}
+
+// QuerySecurityInfoResponse 返回证券档案。
+message QuerySecurityInfoResponse {
+  SecurityInfo info = 1;
+}
+
+// SubscribeReportsRequest 订阅回报推送；from_seq 从 Attach 返回的
+// seq_cursor 起（或心跳获取的最新游标），网关侧按 seq 补发。
+message SubscribeReportsRequest {
+  int64 from_seq = 1;
+  string fund_account = 2;
+  string ext_json = 3;
+}
+
+// ReportEvent 为回报统一信封。
+message ReportEvent {
+  // seq 单调递增（网关本地分配）；客户端校验连续性，缺口时按游标重连补发。
+  int64 seq = 1;
+  string client_order_id = 2;
+  // exchange_order_id 为柜台侧订单号透传（只读）。
+  string exchange_order_id = 3;
+  oneof payload {
+    BrokerOrder order = 4;
+    BrokerTrade trade = 5;
+    AccountSnapshot account = 6;
+  }
+  string ext_json = 7;
+}
+
+// BrokerGatewayService 是渠道核心与券商适配网关之间的统一事务接口。
+service BrokerGatewayService {
+  // Attach 建立会话并获取账户清单与 seq 游标。
+  rpc Attach(AttachRequest) returns (AttachResponse);
+  // Heartbeat 维持会话并轮询游标。
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+  // SubmitOrder 提交委托。
+  rpc SubmitOrder(SubmitOrderRequest) returns (SubmitOrderResponse);
+  // CancelOrder 按 client_order_id 撤单。
+  rpc CancelOrder(CancelOrderRequest) returns (CancelOrderResponse);
+  // QueryOrders 查询当日委托。
+  rpc QueryOrders(QueryOrdersRequest) returns (QueryOrdersResponse);
+  // QueryTrades 查询当日成交。
+  rpc QueryTrades(QueryTradesRequest) returns (QueryTradesResponse);
+  // QueryAccount 查询资金与持仓。
+  rpc QueryAccount(QueryAccountRequest) returns (QueryAccountResponse);
+  // QuerySecurityInfo 查询标的当日证券档案。
+  rpc QuerySecurityInfo(QuerySecurityInfoRequest) returns (QuerySecurityInfoResponse);
+  // SubscribeReports 订阅回报推送（订单/成交通/资金快照），服务端持续推送。
+  rpc SubscribeReports(SubscribeReportsRequest) returns (stream ReportEvent);
+}
