@@ -19,6 +19,7 @@
 | ADR-001 | 统一命名体系：TradeForge / forge / TradeApi / Forge Console | 已接受 | 2026-11-05 |
 | ADR-002 | Protobuf 契约由 buf v2 管理，生成代码入库 | 已接受 | 2026-11-05 |
 | ADR-003 | 撮合结果串行落库，启动时恢复活动订单 | 已接受 | 2026-11-05 |
+| ADR-004 | 券商渠道网关化（线路 1）与 BrokerGateway 统一契约 | 已接受 | 2026-11-09 |
 
 ### ADR-001 统一命名体系
 
@@ -52,6 +53,17 @@
 - **权衡**：全局串行降低多标的并行度，但换来资金/持仓强一致；后续可按 symbol 分片加锁。
 - **状态**：已实现并有集成测试覆盖。
 
+### ADR-004 券商渠道网关化（线路 1）与 BrokerGateway 统一契约
+
+- **背景**：真实券商交易渠道 API/SDK 均为 C++（Linux），渠道核心主体语言沿用 Go；线路 3（cgo 同进程混编）会把 Go runtime 与 C++ 回调线程、构建链绑死，线路 2（全 C++）则推翻主体语言选型。撮合系统定位为「委托→订单回报」链路验证托底件，不应因券商差异改核心。
+- **决策**：
+  - 每个券商 SDK 封装为独立薄适配进程，作为 `BrokerGatewayService` 的 **server**；渠道核心按配置列表作为 client 接入，**不设中央网关聚合服务**，跨券商路由属渠道核心职责（将来可选演进）。
+  - 第一个模拟实现 `broker-stub` 与真网关同构：下游用 `pkg/tradeapi` 顶着 TradeForge server，**不直连进程内 OMS**（撮合簿是 server 内存态）；现有 server / CLI / Forge Console 零改动。
+  - 契约通用化：`client_order_id` 幂等主键、受理 ack 与终态回报分离、网关本地 seq + 会话内内存补发、渠道核心重启靠查询补齐状态；单券商怪癖进 `ext_json` 并登记差异表。
+  - 跨进程持久化补发、多客户号映射、C++ 网关模板列为将来可选；第一个真实券商接入时再启动（M7 之后，不阻塞 M6）。
+- **影响**：契约冻结后接入真实券商只需新增适配进程；渠道核心与 TradeForge server 无需改动。完整语义与差异登记表见 `docs/broker-gateway.md`。
+- **状态**：已接受；M6 全链路 `scripts/e2e-broker.sh` 验收通过，见 §2.4。选型对比与语义决策详见 §3.1。
+
 ---
 
 ## 2. 里程碑与状态
@@ -64,7 +76,7 @@
 | M3 | P2 持仓与订阅 | 持仓投影、事件订阅、TradeApi 重连 | 订阅实时；断线恢复；对账一致 | 2 周 | 已完成 |
 | M4 | P3 行情与 Forge Console | 行情 Provider、行情订阅、REST、页面 | 行情订阅可用；Console 可查可撤 | 2 周 | 已完成 |
 | M5 | P4 压测与加固 | 限流、背压、metrics、对账、故障恢复 | 达到 NFR 目标；重启后数据一致 | 1-2 周 | 已完成（快照决策不做） |
-| M6 | 渠道对接（线路1：网关化） | `broker-gateway.v1` 契约 + broker-stub（模拟券商通道）+ 渠道视角 e2e | `scripts/e2e-broker.sh` 全链路 PASS；契约冻结 | 1 周 | 进行中 |
+| M6 | 渠道对接（线路1：网关化） | `broker-gateway.v1` 契约 + broker-stub（模拟券商通道）+ 渠道视角 e2e | `scripts/e2e-broker.sh` 全链路 PASS；契约冻结 | 1 周 | 已完成（2026-11-09） |
 | M7 | P5 可选扩展（搁置） | 拆分服务、NATS、L2 行情、策略沙箱 | 与"链路验证托底件"定位不符，按需重启 | - | 搁置 |
 
 ### 2.1 M1（P0）任务清单
@@ -105,6 +117,21 @@
 | README 与台账建立 | 通过 |
 | 清理无关 C++ 配置，更新 Go `.gitignore` | 通过 |
 
+### 2.4 M6 验收记录（2026-11-09）
+
+| 验收项 | 结果 |
+|---|---|
+| M6.1 契约冻结 | 通过：`api/proto/brokergateway/v1/brokergateway.proto`（提交 a523c77），buf lint/generate 绿，`gen/` 无漂移 |
+| M6.2 broker-stub 网关 | 通过：`internal/brokergw`（BrokerGatewayService server + seq ring 补发 + 账号/单位映射 + 成交回报增量翻译）、`cmd/broker-stub`、Dockerfile/compose 新容器（50053/50054）|
+| M6.3 渠道视角链路 | 通过：`cmd/bgw-probe` + `scripts/e2e-broker.sh` 三进程编排；Attach→证券档案→挂单 ACCEPTED→对冲 FILLED（双方成交回报）→查询一致→心跳→撤单 CANCELED→seq 连续→旧游标重连补发；独立库多次重复 PASS，CI go job 接入独立 step |
+| M6.4 文档与收尾 | 通过：`docs/broker-gateway.md`（契约语义、seq/重连、账号映射、券商差异登记表 D-001）、README 状态/快速开始/配置/路线、本台账与 ADR-004 |
+| 门禁：`go test ./... -race` | 通过（含 brokergw 15 个用例：换算/账户校验/seq 补发/窗口过期/慢消费者/成交去重/失败重试/外部订单回查）|
+| 门禁：`integration -race` | 通过（oms 6 个用例，本地 PostgreSQL 55432）|
+| 门禁：关键路径 metrics + 结构化日志 | 通过：`internal/brokergw/metrics.go` 暴露 `brokergw_*` Prometheus 端点（默认 :50054）与 /healthz + JSON 结构化日志；e2e 脚本校验指标确实有回报计数 |
+| 门禁：主流程集成测试 | 通过：网关单测 + 渠道 e2e（与 CLI 链路正交）|
+| 门禁：README / API 文档 / 台账 | 通过 |
+| 原有 CLI 链路回归 | 通过：`scripts/e2e.sh` 全 PASS（未被 M6 改动破坏）|
+
 ---
 
 ## 3. 计划与验收
@@ -144,6 +171,8 @@ TradeForge server（现状完全不动）
 3. **差异逃生舱**：`ext`（JSON 字符串）吸收单券商怪癖；差异登记表随真券商接入扩展。
 4. C++ 生成与 CMake 网关模板在第一个真实券商接入时启动（M7 之后，不阻塞 M6）。
 
+**执行结果（2026-11-09）**：M6.1–M6.4 全部完成，`broker-gateway.v1` 契约冻结，验收记录见 §2.4，线路 1 决策由 ADR-004 固化。契约语义、seq/重连规则、账号映射与差异登记表以 `docs/broker-gateway.md` 为准。
+
 ### 3.2 阶段验收门禁
 
 每个里程碑必须满足：
@@ -165,8 +194,8 @@ TradeForge server（现状完全不动）
 | R-003 | 事件与 DB 不一致 | 订单/持仓状态错误 | 幂等消费 + 序列号 + 对账 | 设计已覆盖 |
 | R-004 | 慢消费者拖垮 Gateway | 推送延迟升高 | 独立缓冲 + 行情丢弃 + 背压指标 | 设计已覆盖 |
 | R-005 | 金额浮点误差 | 成交金额错误 | 全部使用 int64 最小单位 | 已约定 |
-| R-006 | 券商 SDK 全为 C++（Linux），渠道核心沿用 Go | 跨语言/跨进程对接复杂度 | 线路 1 网关化：每个券商一个薄适配进程做 BrokerGateway 契约的 server，上游对接面全部同一契约；TradeForge 以 broker-stub 扮演第一个模拟券商 | 选型已定（M6 执行） |
-| R-007 | 各券商回报语义/字段参差 | 契约被单券商怪癖污染 | 主契约保持通用，`ext`（JSON）逃生舱 + 差异登记表管控 | 设计已覆盖 |
+| R-006 | 券商 SDK 全为 C++（Linux），渠道核心沿用 Go | 跨语言/跨进程对接复杂度 | 线路 1 网关化：每个券商一个薄适配进程做 BrokerGateway 契约的 server，上游对接面全部同一契约；TradeForge 以 broker-stub 扮演第一个模拟券商 | 已缓解：线路 1 落地、M6 验收通过；真券商 C++ 网关模板待首个柜台接入 |
+| R-007 | 各券商回报语义/字段参差 | 契约被单券商怪癖污染 | 主契约保持通用，`ext`（JSON）逃生舱 + 差异登记表管控 | 设计已覆盖；差异登记表首条 D-001 已建立（docs/broker-gateway.md） |
 
 ---
 
@@ -193,3 +222,9 @@ TradeForge server（现状完全不动）
 | 环境备注 | 本机 shell 环境变量不跨命令保留：每次 bash 需显式 `export GOPROXY=https://goproxy.cn,direct GOMODCACHE=/tmp/tf-gomod GOPATH=/tmp/tf-gopath GOCACHE=/tmp/tf-gocache`，否则 go 命令走 proxy.golang.org 超时 |
 | 2026-11-06 | M5 收官：P4 状态改为"已完成（快照决策不做）"；快照列入决策不做 |
 | 2026-11-06 | 渠道对接选型拍板：线路 1 网关化（券商 C++ SDK 各封装为独立 BrokerGateway server 进程，渠道核心 Go，上游统一契约）；broker-stub 与真网关同构（报 TradeApi SDK 连 TradeForge，不直连 OMS）；三方案对比与语义决策记入 §3.1；新增 R-006/R-007；M6 启动，M7（P5 可选扩展）搁置 |
+| 2026-11-09 | M6.1 契约入库（补记提交 a523c77）：新增 `api/proto/brokergateway/v1/brokergateway.proto` 及生成代码，Attach/Heartbeat、下单/撤单、三类查询、证券档案与回报流齐备，buf lint/generate 绿 |
+| 2026-11-09 | M6.2 落地 broker-stub：`internal/brokergw`（BrokerGatewayService server、会话内 seq ring 补发、账号/价格单位映射、成交回报增量翻译）、`cmd/broker-stub`、Dockerfile/compose 新容器（50053 gRPC / 50054 metrics）|
+| 2026-11-09 | 修复半成品缺陷：回报流单测数据竞争（fakeStream 加锁）、未初始化 `lookd` 导致非本进程订单回报 panic、成交去重集合 nil map、查询失败仍推进累计成交量水位导致漏发成交；新增外部订单回查与失败重试用例，全量 `go test -race` 转绿 |
+| 2026-11-09 | M6.3 渠道视角验收：`cmd/bgw-probe` 严格断言 ack/终态回报分离、双方成交回报、seq 连续与旧游标重连补发；`scripts/e2e-broker.sh` 三进程编排（独立库/端口）本地多次 PASS；CI go job 新增独立 step；原 CLI 链路 `scripts/e2e.sh` 回归仍 PASS |
+| 2026-11-09 | 网关可观测性补齐：`internal/brokergw/metrics.go` 暴露 `brokergw_*` Prometheus 指标与 /healthz，e2e 校验回报计数存在，满足阶段验收门禁 |
+| 2026-11-09 | M6.4 文档收尾：新增 `docs/broker-gateway.md`（契约语义、seq/重连规则、账号映射、券商差异登记表 D-001/D-002 模板），README 状态/快速开始/配置/路线同步；ADR-004 固化线路 1；M6 标记已完成、契约冻结，R-006/R-007 状态更新 |
