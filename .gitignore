@@ -48,5 +48,8 @@ logs/
 # WorkBuddy AI workspace data (agent memory, session artifacts; local only)
 .workbuddy-ai/
 
+# Local vendor SDK references (symlinks to Linux x86_64 SDK/demo trees)
+refs/broker-sdks/
+
 # macOS
 .DS_Store

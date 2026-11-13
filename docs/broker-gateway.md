@@ -120,7 +120,7 @@ CI（`.github/workflows/ci.yml`）的 go job 已把该链路作为独立 step �
 
 ## 9. 券商差异登记表
 
-> 规则：主契约保持通用；任何单柜台特有字段/状态/行为先落 `ext_json`，并在本表登记后再决定是否需要升版本。真券商接入时每家新增一行，C++ 网关模板在第一个真实柜台接入时启动（M7 之后）。
+> 规则：主契约保持通用；任何单柜台特有字段/状态/行为先落 `ext_json`，并在本表登记后再决定是否需要升版本。M7 起逐家登记真实柜台；C++ 网关骨架见 [docs/m7-cpp-gateway.md](./m7-cpp-gateway.md)，材料只以 C++ demo `#include` 的头文件为入口，敏感/授权文件不读、不入库。业务范围仅现货（股票 / ETF / 可转债），期权/期货/两融/回购等其他市场 API 不在适配范围。
 
 | 编号 | 柜台 / 网关 | 差异点 | 契约侧处置 | 状态 |
 |---|---|---|---|---|
@@ -132,10 +132,13 @@ CI（`.github/workflows/ci.yml`）的 go job 已把该链路作为独立 step �
 | D-001 | 同上 | 回报 seq 仅内存、进程重启清零 | 渠道核心重启用查询补齐（v1 约定） | 已实现 |
 | D-001 | 同上 | 单一上游账号、无多客户号 | `F001 / A0001@SIM` 固定映射 | 已实现 |
 | D-001 | 同上 | 停牌 / 涨跌停为模拟开关 | `ext_json` 不承载业务规则，走 `QuerySecurityInfo` | 已实现 |
-| D-002 | 真实券商（待接入） | 柜台原生委托号、成交流水号、Topic 订阅 / 登录即推模型、原始状态码 | 网关内部消化并映射为 `exchange_order_id` / `trade_id` / 统一状态；原值进 `ext_json` | 待接入 |
+| D-002 | 金证极速交易柜台 `kdvip_ap` | Topic 订阅制（`filter`=股东账号、`chDataSet='1'`）、无原生幂等键、价格 `char[21]` 字符串、无 OrderType/TIF、无资金持仓推送、状态码表缺失、秒级时间 | 网关维护 `client_order_id↔iOrderBsn/szOrderId` 映射；订阅内部消化；定点解析 ×10000；缺省 LIMIT/DAY；查询拼快照；原码进 `ext_json`；码表待补 | 已登记（M7.1） |
+| D-003 | 华锐 ATPQuantAPI 交易柜台 | 登录即推（非订阅）、`cl_ord_no` 语义偏差（客户订单号且下单不含）、成交并入主推无独立回调、无独立 TIF、FPGA/软报盘双通道、双 SDK 版本消息结构差异 | 网关内部消化主推并按 `exec_id` 去重；`exchange_order_id` 取 `order_id`，`cl_ord_no` 进 `ext_json`；IOC/FOK 由 `order_type 'd'/'e'` 承担；通道/版本/重连参数进 `ext_json` | 已登记（M7.1） |
+| D-004 | 华锐 AMA 低延时行情（C++） | 契约无行情 RPC / 无行情载荷；Price6 单位差 100 倍；市场码/停牌字段多位义；TCP/FPGA 字段差异；行情侧自动重连与补发 | 仅作 `QuerySecurityInfo` 旁路数据源，不进 `ReportEvent`；单位 ÷100；多余字段进 `ext_json`；`appl_seq_num` 与网关 seq 隔离 | 已登记（M7.1） |
 
 ## 10. 已知限制与演进
 
-- **不做的**：跨进程持久化 seq 补发、中央网关聚合、订单簿快照、拆分服务/NATS/L2 行情（M5/M7 决策）。
-- **将来可选**：C++ + CMake 网关模板（第一个真实券商接入时）、多账号映射、按券商扩展差异表、把 `ext_json` 中稳定复用的字段升级为契约字段（需新版本 proto 与 breaking 检查）。
+- **不做的**：跨进程持久化 seq 补发、中央网关聚合、订单簿快照、拆分服务/NATS/L2 行情（M5/M8 决策）。
+- **M7 已启动**：`gateways/cpp/` 提供 C++ CMake 骨架、三个适配层接口与纯核心单测；真实柜台联调需 Linux x86_64 构建机与仿真环境（见 [docs/m7-cpp-gateway.md](./m7-cpp-gateway.md) 与台账 §3.3）。契约仍冻结，不新增行情 RPC。
+- **将来可选**：多账号映射、按券商扩展差异表、把 `ext_json` 中稳定复用的字段升级为契约字段（需新版本 proto 与 breaking 检查）。
 - **当前边界**：stub 的适配器是 Go 进程；换成 C++ 实现时只要满足本文契约与 seq 语义，渠道核心与 TradeForge server 均无需改动。

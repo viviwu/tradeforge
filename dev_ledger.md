@@ -77,7 +77,8 @@
 | M4 | P3 行情与 Forge Console | 行情 Provider、行情订阅、REST、页面 | 行情订阅可用；Console 可查可撤 | 2 周 | 已完成 |
 | M5 | P4 压测与加固 | 限流、背压、metrics、对账、故障恢复 | 达到 NFR 目标；重启后数据一致 | 1-2 周 | 已完成（快照决策不做） |
 | M6 | 渠道对接（线路1：网关化） | `broker-gateway.v1` 契约 + broker-stub（模拟券商通道）+ 渠道视角 e2e | `scripts/e2e-broker.sh` 全链路 PASS；契约冻结 | 1 周 | 已完成（2026-11-09） |
-| M7 | P5 可选扩展（搁置） | 拆分服务、NATS、L2 行情、策略沙箱 | 与"链路验证托底件"定位不符，按需重启 | - | 搁置 |
+| M7 | 真实券商 C++ 网关适配（线路 1 落地） | 金证 kdvip_ap / 华锐 ATP 交易网关 + 华锐 AMA 行情旁路；C++ CMake 骨架、字段/状态/单位映射、差异登记 | 设计与骨架入库、纯 C++ 核心单测通过、Linux x86_64 可构建、契约零改动 | - | 进行中（2026-11-13 启动） |
+| M8 | P5 可选扩展（搁置，原 M7 内容） | 拆分服务、NATS、L2 行情、策略沙箱 | 与"链路验证托底件"定位不符，按需重启 | - | 搁置 |
 
 ### 2.1 M1（P0）任务清单
 
@@ -183,6 +184,19 @@ TradeForge server（现状完全不动）
 4. 更新 README、API 文档和本台账；
 5. 压测结果记录到 `docs/benchmarks.md`（M5 起）。
 
+### 3.3 M7：真实券商 C++ 网关适配（2026-11-13 启动）
+
+**材料与范围**（用户 2026-11-13 提供）：`refs/broker-sdks/` 下三个本地软链接——金证极速交易柜台 `kdvip_api`、华锐低延时交易柜台 `atp_quant_api`、华锐低延时行情 `amd_ama`（只看 C++ 版）。经用户明确约束：**只以 C++ demo 实际 `#include` 的头文件为入口（必要时含其传递依赖的结构定义）+ demo 源码**，其余 SDK 头文件不看；不读取 `.ini` 登录配置、`.lic` 授权、账号/密钥与其他敏感文件；材料不入库（`.gitignore` 排除）。**业务范围仅现货（股票 / ETF / 可转债）**，期权 / 期货 / 两融 / 回购 / 港股通等其他市场 API 与头文件一律不看、不映射。本机为 arm/macOS，SDK 均为 Linux x86_64 预编译库，**本机不编译、不运行 SDK demo**，只跑我们自己的纯 C++ 核心单测。
+
+| 步骤 | 内容 | 状态 |
+|---|---|---|
+| M7.1 | 三套 SDK 接口梳理 + 适配设计 `docs/m7-cpp-gateway.md`（字段/状态/TIF/单位映射、回报模型、D-002~D-004 差异登记） | 已完成 |
+| M7.2 | `gateways/cpp/` CMake 骨架：纯 C++ 核心（types/adapter/mapping/ring/gateway）+ 三个 SDK 适配层条件编译骨架 + `ctest` 单测 | 已完成（本机 ctest 1/1 PASS） |
+| M7.3 | Linux x86_64 构建机打开 `BROKERGW_WITH_*`，链接厂商库并编译 gRPC server 层；验证头文件/库可链接 | 待构建机 |
+| M7.4 | 柜台仿真环境联调，补齐金证状态码表、ATP `cl_ord_no`/TIF 语义、AMA 组播与停牌位义 | 待授权/仿真环境 |
+
+**关键约束**：契约 v1 冻结，不新增行情 RPC、不改 `ReportEvent` oneof；AMA 行情只作为 `QuerySecurityInfo` 旁路数据源；差异全部经 `ext_json` + 差异登记表消化。设计细节见 `docs/m7-cpp-gateway.md`。
+
 ---
 
 ## 4. 风险登记
@@ -194,8 +208,10 @@ TradeForge server（现状完全不动）
 | R-003 | 事件与 DB 不一致 | 订单/持仓状态错误 | 幂等消费 + 序列号 + 对账 | 设计已覆盖 |
 | R-004 | 慢消费者拖垮 Gateway | 推送延迟升高 | 独立缓冲 + 行情丢弃 + 背压指标 | 设计已覆盖 |
 | R-005 | 金额浮点误差 | 成交金额错误 | 全部使用 int64 最小单位 | 已约定 |
-| R-006 | 券商 SDK 全为 C++（Linux），渠道核心沿用 Go | 跨语言/跨进程对接复杂度 | 线路 1 网关化：每个券商一个薄适配进程做 BrokerGateway 契约的 server，上游对接面全部同一契约；TradeForge 以 broker-stub 扮演第一个模拟券商 | 已缓解：线路 1 落地、M6 验收通过；真券商 C++ 网关模板待首个柜台接入 |
-| R-007 | 各券商回报语义/字段参差 | 契约被单券商怪癖污染 | 主契约保持通用，`ext`（JSON）逃生舱 + 差异登记表管控 | 设计已覆盖；差异登记表首条 D-001 已建立（docs/broker-gateway.md） |
+| R-006 | 券商 SDK 全为 C++（Linux），渠道核心沿用 Go | 跨语言/跨进程对接复杂度 | 线路 1 网关化：每个券商一个薄适配进程做 BrokerGateway 契约的 server，上游对接面全部同一契约；TradeForge 以 broker-stub 扮演第一个模拟券商 | 已缓解：M6 线路 1 落地；M7 C++ 骨架启动（M7.1/M7.2 完成），真柜台联调待环境 |
+| R-007 | 各券商回报语义/字段参差 | 契约被单券商怪癖污染 | 主契约保持通用，`ext`（JSON）逃生舱 + 差异登记表管控 | 设计已覆盖；D-001~D-004 已登记（docs/broker-gateway.md、docs/m7-cpp-gateway.md） |
+| R-008 | 本机 arm/macOS 无法编译或运行 Linux x86_64 预编译 SDK/demo | M7.3/M7.4 无法在本机验证 | 默认 CMake 只构建纯 C++ 核心并在本机跑 ctest；厂商库与 gRPC 层限定 Linux x86_64 构建机 + 仿真环境；不复制 SDK 入库 | 已缓解（骨架阶段） |
+| R-009 | 真实柜台语义待确认：金证状态码表缺失、ATP `cl_ord_no` 语义偏差与无独立 TIF、AMA Price6/市场码/停牌位义 | 状态映射错误或契约被污染 | 骨架不猜码值（金证默认 UNSPECIFIED，联调时 `SetKdvipStatusMap` 注入）；原值进 `ext_json` 并登记 D-002~D-004 | 进行中 |
 
 ---
 
@@ -228,3 +244,8 @@ TradeForge server（现状完全不动）
 | 2026-11-09 | M6.3 渠道视角验收：`cmd/bgw-probe` 严格断言 ack/终态回报分离、双方成交回报、seq 连续与旧游标重连补发；`scripts/e2e-broker.sh` 三进程编排（独立库/端口）本地多次 PASS；CI go job 新增独立 step；原 CLI 链路 `scripts/e2e.sh` 回归仍 PASS |
 | 2026-11-09 | 网关可观测性补齐：`internal/brokergw/metrics.go` 暴露 `brokergw_*` Prometheus 指标与 /healthz，e2e 校验回报计数存在，满足阶段验收门禁 |
 | 2026-11-09 | M6.4 文档收尾：新增 `docs/broker-gateway.md`（契约语义、seq/重连规则、账号映射、券商差异登记表 D-001/D-002 模板），README 状态/快速开始/配置/路线同步；ADR-004 固化线路 1；M6 标记已完成、契约冻结，R-006/R-007 状态更新 |
+| 2026-11-10 | 补记：M6 两个提交经 SSH 通道推送到远端；`.workbuddy-ai/` 加入版本控制忽略（提交 490a419） |
+| 2026-11-13 | M7 启动（原 M7「P5 可选扩展」改编号 M8 继续搁置）：用户提供三套真实券商/行情 SDK 软链接材料，限定只参考头文件与 demo、不读敏感/授权文件、本机 arm 不跑 x86 demo |
+| 2026-11-13 | M7.1 完成：`docs/m7-cpp-gateway.md` 落地三通道对照、字段/状态/单位/回报模型映射与差异登记 D-002（金证）/D-003（ATP）/D-004（AMA）；契约零改动，行情只作 QuerySecurityInfo 旁路 |
+| 2026-11-13 | M7.2 完成：`gateways/cpp/` CMake 纯 C++ 核心骨架 + 三个 SDK 适配层条件编译骨架；本机 AppleClang ctest 1/1 PASS（定点换算、ATP 状态映射、金证码表缺省、seq 补发与窗口过期、成交去重、查询失败重试）；`refs/broker-sdks/` 加入忽略 |
+| 2026-11-13 | 用户三条范围约束落档：只以 C++ demo `#include` 的头文件为入口（其余 SDK 头不看）、不读敏感/授权文件、本机 arm 不编译不运行 x86 SDK demo；业务仅现货（股票 / ETF / 可转债），期权/期货/两融/回购/港股通等其他市场 API 不映射 |

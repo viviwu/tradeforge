@@ -2,7 +2,7 @@
 
 TradeForge 是一个用 Go 编写的**模拟交易系统**，用于练习高并发、gRPC、事件驱动和交易系统设计。系统支持 CLI 高并发登录、下单、撤单、查询，以及订单/策略状态和行情的实时订阅，并提供 Web 管理端。
 
-> 当前状态：**P0–P4 主链路 MVP 已完成；M6 渠道对接（BrokerGateway v1）已完成、契约冻结**。服务端、CLI、Go SDK、撮合/OMS、订阅、行情、Forge Console、Docker 部署与 Postgres 集成测试均已可运行；渠道侧通过模拟券商网关 `broker-stub` 与 `bgw-probe` 验证统一契约。需求与技术方案见 [PR-TD.doc.md](./PR-TD.doc.md)，进度与决策见 [dev_ledger.md](./dev_ledger.md)。
+> 当前状态：**P0–P4 主链路 MVP 已完成；M6 渠道对接（BrokerGateway v1）已完成、契约冻结；M7 真实券商 C++ 网关适配已启动（设计与骨架落地）**。服务端、CLI、Go SDK、撮合/OMS、订阅、行情、Forge Console、Docker 部署与 Postgres 集成测试均已可运行；渠道侧通过模拟券商网关 `broker-stub` 与 `bgw-probe` 验证统一契约。需求与技术方案见 [PR-TD.doc.md](./PR-TD.doc.md)，进度与决策见 [dev_ledger.md](./dev_ledger.md)。
 
 ## 命名体系
 
@@ -177,11 +177,14 @@ Go 1.26+ · gRPC + Protobuf · grpc-gateway · Cobra · PostgreSQL 17 · pgx · 
 | P3 | 模拟行情、行情订阅、Forge Console（已完成） |
 | P4 | 压测、限流、背压、对账、故障恢复（已完成；订单簿快照经评审决策不做） |
 | M6 | 渠道对接（已完成）：`broker-gateway.v1` 契约、broker-stub 网关、渠道视角 e2e、契约冻结 |
-| P5 | 可选：拆分服务、NATS、L2 行情、策略沙箱（搁置，按需重启） |
+| M7 | 真实券商 C++ 网关适配（进行中，仅现货：股票 / ETF / 可转债）：金证 kdvip / 华锐 ATP 交易 + 华锐 AMA 行情旁路；设计、CMake 骨架与纯核心单测已落地 |
+| M8 | P5 可选扩展（搁置）：拆分服务、NATS、L2 行情、策略沙箱 |
 
 ## 文档
 
 - [PR-TD.doc.md](./PR-TD.doc.md)：产品需求与技术设计
 - [dev_ledger.md](./dev_ledger.md)：ADR、里程碑、风险与变更记录
 - [docs/broker-gateway.md](./docs/broker-gateway.md)：BrokerGateway v1 契约语义、seq/重连规则、账号映射与券商差异登记表
+- [docs/m7-cpp-gateway.md](./docs/m7-cpp-gateway.md)：M7 三通道适配设计、字段/状态/单位映射与 D-002~D-004 差异登记
+- [gateways/cpp/README.md](./gateways/cpp/README.md)：C++ 网关骨架构建与 Linux x86_64 SDK 接入说明
 - [docs/benchmarks.md](./docs/benchmarks.md)：P4 压测基线
