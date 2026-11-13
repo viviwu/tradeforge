@@ -45,5 +45,8 @@ logs/
 *.swo
 *.iml
 
+# WorkBuddy AI workspace data (agent memory, session artifacts; local only)
+.workbuddy-ai/
+
 # macOS
 .DS_Store
