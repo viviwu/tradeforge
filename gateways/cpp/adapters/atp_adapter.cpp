@@ -155,12 +155,16 @@ void AtpAdapter::Resolve(int64_t request_id, AtpCallResult result) {
 std::string AtpAdapter::ClientOrderIdFrom(uint64_t batch_cl_ord_no,
                                           int64_t cl_ord_no) const {
   std::lock_guard<std::mutex> lk(mu_);
-  auto it = cid_by_request_.find(static_cast<int64_t>(batch_cl_ord_no));
-  if (it != cid_by_request_.end()) return it->second;
-  it = cid_by_request_.find(cl_ord_no);
-  if (it != cid_by_request_.end()) return it->second;
+  // cl_ord_no 是柜台权威键（下单应答时记录），优先按它反查；
+  // 不要让 batch_cl_ord_no（查询固定为 1）误命中 request_id 造成串号。
   auto jt = cid_by_cl_ord_no_.find(cl_ord_no);
   if (jt != cid_by_cl_ord_no_.end()) return jt->second;
+  auto it = cid_by_request_.find(cl_ord_no);
+  if (it != cid_by_request_.end()) return it->second;
+  if (batch_cl_ord_no != 0 && batch_cl_ord_no != 1) {
+    it = cid_by_request_.find(static_cast<int64_t>(batch_cl_ord_no));
+    if (it != cid_by_request_.end()) return it->second;
+  }
   return "";
 }
 
@@ -290,7 +294,8 @@ SubmitAck AtpAdapter::SubmitOrder(const SubmitRequest& req) {
   msg->SetPrice(static_cast<double>(price_u) / 10000.0);
   msg->SetOrderType(aq::ATPOrderTypeConst::kFixedNew);
   msg->SetPassword(password_.c_str());
-  msg->SetBatchClOrdNo(static_cast<uint64_t>(rid));
+  // 不设 batch_cl_ord_no：券商环境按该字段过滤当日委托/成交查询，
+  // 固定用 1 才能查到；下单批号交给柜台默认分配（与 uni_trade_app 一致）。
 
   const aq::ATPErrorCodeType rc = api_->ReqCashAuctionOrder(msg, rid);
   aq::ATPReqCashAuctionOrderMsg::DeleteMessage(msg);
@@ -362,7 +367,8 @@ std::vector<BrokerOrder> AtpAdapter::QueryOrders(const std::string& cid) {
     msg->SetPassword(password_.c_str());
     msg->SetReturnNum(0);
     msg->SetClOrdNo(0);
-    msg->SetBatchClOrdNo(static_cast<uint64_t>(rid));  // echo back for cid mapping
+    msg->SetSecurityId("");  // 空=查所有标的
+    msg->SetBatchClOrdNo(1);  // 券商环境固定批号 1（与 uni_trade_app 一致）
     msg->SetMarketId(sh ? aq::ATPMarketIDConst::kShangHai
                         : aq::ATPMarketIDConst::kShenZhen);
     msg->SetAccountId(account.c_str());
@@ -398,7 +404,8 @@ std::vector<BrokerTrade> AtpAdapter::QueryTrades(const std::string& cid) {
     msg->SetFundAccountId(fund_account_.c_str());
     msg->SetPassword(password_.c_str());
     msg->SetReturnNum(0);
-    msg->SetBatchClOrdNo(static_cast<uint64_t>(rid));  // echo back for cid mapping
+    msg->SetSecurityId("");  // 空=查所有标的
+    msg->SetBatchClOrdNo(1);  // 券商环境固定批号 1（与 uni_trade_app 一致）
     msg->SetMarketId(sh ? aq::ATPMarketIDConst::kShangHai
                         : aq::ATPMarketIDConst::kShenZhen);
     msg->SetAccountId(account.c_str());
@@ -513,7 +520,13 @@ void AtpAdapter::OnLogin(const aq::ATPCustomerInfo& msg) {
 void AtpAdapter::OnRspCashAuctionOrder(const aq::ATPRspCashAuctionOrderMsg& msg,
                                        const aq::ATPRspErrorInfo& error_info,
                                        int64_t request_id) {
-  const std::string cid = ClientOrderIdFrom(msg.GetBatchClOrdNo(), msg.GetClOrdNo());
+  // 券商环境按 batch_cl_ord_no 过滤委托：下单不设该字段，应答按 request_id 反查 cid。
+  std::string cid;
+  {
+    std::lock_guard<std::mutex> lk(mu_);
+    auto it = cid_by_request_.find(request_id);
+    if (it != cid_by_request_.end()) cid = it->second;
+  }
   const std::string err = ErrorText(error_info);
 
   BrokerOrder order;
@@ -651,7 +664,13 @@ void AtpAdapter::OnRspCashOrderQueryResult(const aq::ATPRspCashOrderQueryResultM
                                            int64_t request_id,
                                            const aq::ATPRspErrorInfo& error_info,
                                            bool is_last) {
-  const std::string cid = ClientOrderIdFrom(msg.GetBatchClOrdNo(), msg.GetClOrdNo());
+  // 查询时 batch 固定为 1，只能按 cl_ord_no 反查下单时记录的 cid。
+  std::string cid;
+  {
+    std::lock_guard<std::mutex> lk(mu_);
+    auto it = cid_by_cl_ord_no_.find(msg.GetClOrdNo());
+    if (it != cid_by_cl_ord_no_.end()) cid = it->second;
+  }
   BrokerOrder o;
   o.client_order_id = cid;
   o.exchange_order_id = S(msg.GetOrderId());
@@ -702,7 +721,12 @@ void AtpAdapter::OnRspCashOrderQueryResult(const aq::ATPRspCashOrderQueryResultM
 void AtpAdapter::OnRspCashTradeOrderQueryResult(
     const aq::ATPRspCashTradeOrderQueryResultMsg& msg, int64_t request_id,
     const aq::ATPRspErrorInfo& error_info, bool is_last) {
-  const std::string cid = ClientOrderIdFrom(msg.GetBatchClOrdNo(), msg.GetClOrdNo());
+  std::string cid;
+  {
+    std::lock_guard<std::mutex> lk(mu_);
+    auto it = cid_by_cl_ord_no_.find(msg.GetClOrdNo());
+    if (it != cid_by_cl_ord_no_.end()) cid = it->second;
+  }
   BrokerTrade t;
   t.trade_id = S(msg.GetExecId());
   t.client_order_id = cid;
@@ -725,11 +749,12 @@ void AtpAdapter::OnRspCashTradeOrderQueryResult(
   bool ready = false;
   {
     std::lock_guard<std::mutex> lk(mu_);
-    if (!t.trade_id.empty()) trades_.push_back(t);
+    // 券商查询会回一条空占位记录（无 exec_id/qty），过滤掉。
+    if (!t.trade_id.empty() && t.qty > 0) trades_.push_back(t);
     AtpCallResult& acc = accum_[request_id];
     acc.ok = error_info.error_id == 0;
     acc.error = ErrorText(error_info);
-    acc.trades.push_back(t);
+    if (!t.trade_id.empty() && t.qty > 0) acc.trades.push_back(t);
     if (is_last) {
       result = std::move(acc);
       accum_.erase(request_id);

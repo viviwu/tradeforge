@@ -193,7 +193,7 @@ TradeForge server（现状完全不动）
 | M7.1 | 三套 SDK 接口梳理 + 适配设计 `docs/m7-cpp-gateway.md`（字段/状态/TIF/单位映射、回报模型、D-002~D-004 差异登记） | 已完成 |
 | M7.2 | `gateways/cpp/` CMake 骨架：纯 C++ 核心（types/adapter/mapping/ring/gateway）+ 三个 SDK 适配层条件编译骨架 + `ctest` 单测 | 已完成（本机 ctest 1/1 PASS） |
 | M7.3 | Linux x86_64 构建机打开 `BROKERGW_WITH_*`，链接厂商库并编译 gRPC server 层；验证头文件/库可链接 | 已完成（2026-11-17，WSL2 Alma8）：gRPC C++ 源码构建 + C++ stub 入库 + gRPC server 层 + mock/ATP/AMA 三适配器编链通过 |
-| M7.4 | 券商联调环境对接，补齐金证状态码表、ATP `cl_ord_no`/TIF 语义、AMA 组播与停牌位义 | 进行中（2026-11-17）：ATP 交易链路（Attach/订阅/资金/证券档案/下单/成交回报/撤单 ack）与 AMA 行情旁路（真实快照进 `QuerySecurityInfo.ext_json`）均已用菜单 CLI 在券商联调环境验证；ATP 当日委托/成交查询在该环境返回空（厂商 demo 同现象 `-1025`/`未找到成交回报`，待券商确认 API 行为/权限） |
+| M7.4 | 券商联调环境对接，补齐金证状态码表、ATP `cl_ord_no`/TIF 语义、AMA 组播与停牌位义 | 进行中（2026-11-17）：ATP 交易链路（Attach/订阅/资金/证券档案/下单/成交回报/撤单 ack）、AMA 行情旁路（真实快照进 `QuerySecurityInfo.ext_json`）、当日委托/成交查询（下单后返回真实数据）均已用菜单 CLI 在券商联调环境验证 |
 
 **关键约束**：契约 v1 冻结，不新增行情 RPC、不改 `ReportEvent` oneof；AMA 行情只作为 `QuerySecurityInfo` 旁路数据源；差异全部经 `ext_json` + 差异登记表消化。设计细节见 `docs/m7-cpp-gateway.md`。
 
@@ -252,5 +252,6 @@ TradeForge server（现状完全不动）
 | 2026-11-17 | M7.3 落地：WSL2 Alma8 源码构建 gRPC C++（protoc 3.19.5），从冻结 proto 生成并提交 C++ stub；新增 `grpc/grpc_service.{h,cpp}` 实现 9 个 RPC ↔ Gateway 映射；补齐 `mock_adapter`；`ctest` 与 `scripts/e2e-cpp.sh` 全链路 PASS（seq 连续/自成交双方回报/查询一致/撤单/重连补发） |
 | 2026-11-17 | ATP 真柜台适配 `adapters/atp_adapter.{hpp,cpp}`：异步 SDK 请求用 request_id→promise 桥接为同步；回调只入队；Ack/终态分离；按 exec_id 去重成交；沪市/深市分别查询；资金按币种分页只取 CNY；撤单按契约返回受理 ack、终态走回报流 |
 | 2026-11-17 | AMA 行情旁路 `adapters/ama_quote_source.{hpp,cpp}`：只喂 QuerySecurityInfo，Price6÷100、停牌位进 ext_json；ATP 适配器可通过 `ama_config` 挂载 |
-| 2026-11-17 | 券商联调环境验证：vendor demo 登录+资金查询成功；菜单 CLI（`cmd/bgw-cli`）对 ATP 完成 Attach/订阅/资金/证券档案/下单（PENDING_NEW→UNSEND→FILLED + 成交回报（exec_id/价/量））/撤单受理；ATP 当日委托/成交查询在该环境返回空——厂商 demo 同现象（`-1025`/`未找到成交回报`），登记为待券商确认的 API 行为，不作为实现缺陷 |
+| 2026-11-17 | 券商联调环境验证：vendor demo 登录+资金查询成功；菜单 CLI（`cmd/bgw-cli`）对 ATP 完成 Attach/订阅/资金/证券档案/下单（PENDING_NEW→UNSEND→FILLED + 成交回报（exec_id/价/量））/撤单受理 |
+| 2026-11-17 | 修正 ATP 当日委托/成交查询返回空：根因是 `batch_cl_ord_no` 用法——下单不应设该字段、查询须固定填 1（与 `uni_trade_app` 一致），原先填 request_id 导致柜台按批号过滤查不到；另补 `SetSecurityId("")`。修正后下单再查询返回 10 委托 + 10 成交真实数据（价格/数量/金额/状态/exchange_order_id 齐全）。client_order_id 映射：实时响应按 cl_ord_no 建立，历史单/网关重启后无内存映射（符合契约靠查询补齐） |
 | 2026-11-17 | AMA 行情旁路真数据验证：用厂商 demo 确认按品种订阅（`SubscribeCategoryItem`+`SubscribeSecuDataType::kSnapshot`+股票/基金/债券/指数）才能收到快照（原按权限订阅 `SubscribeItem` 无效）；修正 `AmaQuoteSource` 后 `QuerySecurityInfo.ext_json` 同时带 `ama`（orig_time/phase/last_price_u）与 `atp` 数据，600000/000001 均拿到真实快照 |
