@@ -56,8 +56,9 @@ bool DoubleYuanToMicro(double price, int64_t* out) {
   const long double scaled = static_cast<long double>(price) * kMicroPerYuan;
   if (scaled > static_cast<long double>(std::numeric_limits<int64_t>::max())) return false;
   const long double rounded = std::round(scaled);
-  // ATP declares N13(4): reject anything that is not representable in 1e-4.
-  if (std::fabs(scaled - rounded) > 1e-6L) return false;
+  // ATP declares N13(4). A double at ~1e8 has ~1e-8 absolute error, which
+  // becomes ~1e-4 after scaling; allow a small tolerance before rounding.
+  if (std::fabs(scaled - rounded) > 0.01L) return false;
   *out = static_cast<int64_t>(rounded);
   return true;
 }

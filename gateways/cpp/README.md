@@ -34,4 +34,39 @@ cmake -S gateways/cpp -B build-cpp \
 - AMA：`c++/include` + `c++/lib/Lnx64/libama.so`，CMake≥3.15 / C++11。
 - gRPC server 层（`-DBROKERGW_WITH_GRPC=ON`）额外需要 Protobuf/gRPC C++ 与在 Linux 上从冻结 proto 生成的 `.pb.cc/.pb.h`，通过 `BROKERGW_PROTO_GEN_DIR` 指定；契约本身不改。
 
-`adapters/*.hpp` 里对 SDK 的 `#include` 全部包在条件编译内，未打开对应开关时不会被编译；真正的柜台联调需要账号、授权与仿真环境，不在本机范围内。
+`adapters/*.hpp` 里对 SDK 的 `#include` 全部包在条件编译内，未打开对应开关时不会被编译。
+
+## WSL2 联调机（AlmaLinux 8 x86_64）
+
+联调机上三套 demo 位于 `/home/wuxw/workspace/{kdvip_demo,archforce_quantapi_demo,archforce_ama_demo}`，
+只读原位引用、不复制入库。gRPC C++ 依赖源码构建（Alma8 源无 grpc 包）：
+
+```bash
+# 1) 构建 gRPC C++（含 protoc / grpc_cpp_plugin），产物在 build/deps/grpc
+bash build/deps/build_grpc_min.sh
+
+# 2) 从冻结 proto 生成 C++ stub，提交到 gateways/cpp/gen/
+bash build/deps/gen_cpp_stubs.sh
+
+# 3) 构建 C++ 网关（mock 契约层）+ 跑核心单测
+bash build/deps/build_cpp_gateway.sh
+
+# 4) 契约层端到端自检（启动 C++ 网关 + Go bgw-probe）
+bash scripts/e2e-cpp.sh
+```
+
+ATP 真实柜台适配（可选）：
+
+```bash
+cmake -S gateways/cpp -B build/cpp-atp -DCMAKE_BUILD_TYPE=Release \
+  -DBROKERGW_WITH_GRPC=ON -DBROKERGW_WITH_ATP=ON \
+  -DgRPC_DIR=build/deps/grpc/lib/cmake/grpc \
+  -DCMAKE_PREFIX_PATH=build/deps/grpc \
+  -DBROKERGW_ATP_SDK=/home/wuxw/workspace/archforce_quantapi_demo/sdk/v2.7.1.2-gcc4.8.5
+cmake --build build/cpp-atp -j4
+
+# 仿真配置（key=value，真实值不入库），参考 build/atp.conf.example
+build/cpp-atp/brokergw_server --adapter atp --atp-config /path/to/atp.conf \
+  --addr 0.0.0.0:50053
+```
+

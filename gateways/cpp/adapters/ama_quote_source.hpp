@@ -8,6 +8,9 @@
 
 #ifdef BROKERGW_WITH_AMA
 
+#include <cstdint>
+#include <map>
+#include <mutex>
 #include <string>
 
 #include "brokergw/adapter.h"
@@ -36,7 +39,7 @@ namespace brokergw {
 //   市场码          <- kSSE 101 / kSZSE 102 -> SH / SZ
 // 行情侧 appl_seq_num / channel_no 与网关本地 seq 完全隔离；
 // 10 档盘口、trading_phase_code 位义、FPGA 字段缺失进 ext_json。
-class AmaQuoteSource final : public IAMDSpi {
+class AmaQuoteSource final : public amd::ama::IAMDSpi {
  public:
   explicit AmaQuoteSource(const std::string& cfg_path);
   ~AmaQuoteSource() override;
@@ -47,10 +50,13 @@ class AmaQuoteSource final : public IAMDSpi {
   // 由网关的 QuerySecurityInfo 调用；缓存 + 超时，回调线程不做业务处理。
   SecurityInfo Lookup(const std::string& market, const std::string& symbol);
 
-  void OnMDSnapshot(MDSnapshot* snapshot) override;
+  void OnMDSnapshot(amd::ama::MDSnapshot* snapshots, uint32_t cnt) override;
 
  private:
-  // TODO(Linux 仿真环境)：Init/Join、订阅维度、代码表缓存、锁与超时。
+  std::string cfg_path_;
+  bool started_ = false;
+  mutable std::mutex mu_;
+  std::map<std::string, SecurityInfo> cache_;
 };
 
 }  // namespace brokergw
