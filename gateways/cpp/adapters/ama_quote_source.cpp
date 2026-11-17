@@ -79,6 +79,9 @@ AmaQuoteSource::~AmaQuoteSource() { Stop(); }
 bool AmaQuoteSource::Start() {
   const auto cfg = ReadConfig(cfg_path_);
   am::AMDProperty props;
+  // 与 demo 一致：TCP 关键线程绑核、启用 dedup；不设置时部分环境数据不下发。
+  const std::string affinity = Get(cfg, "tcp_thread_affinity", "0,1");
+  props.SetValue(am::property::kTCPThreadAffinity, affinity.c_str());
   am::IAMDApi::SetProperty(&props);
 
   am::Cfg c;
@@ -110,7 +113,7 @@ bool AmaQuoteSource::Start() {
     ++idx;
   }
   if (idx == 0) {
-    // Demo defaults for the local仿真 environment.
+    // Demo defaults for the broker test environment.
     std::strncpy(c.ums_servers[0].local_ip, "0.0.0.0", sizeof(c.ums_servers[0].local_ip) - 1);
     std::strncpy(c.ums_servers[0].server_ip, "172.16.109.14",
                  sizeof(c.ums_servers[0].server_ip) - 1);
@@ -129,11 +132,19 @@ bool AmaQuoteSource::Start() {
   std::vector<std::pair<int32_t, std::string>> symbols;
   SplitSymbols(Get(cfg, "symbols", "SH:600000,SZ:000001"), &symbols);
   if (!symbols.empty()) {
-    std::vector<am::SubscribeItem> items(symbols.size());
+    // 券商联调环境的 amatest 账号只有「按品种订阅」权限（厂商 demo 用
+    // SubscribeCategoryItem），按权限订阅 SubscribeItem 拿不到快照。
+    const uint64_t data_type = am::SubscribeSecuDataType::kSnapshot;
+    const uint64_t category = am::SubscribeCategoryType::kStock |
+                              am::SubscribeCategoryType::kFund |
+                              am::SubscribeCategoryType::kBond |
+                              am::SubscribeCategoryType::kIndex;
+    std::vector<am::SubscribeCategoryItem> items(symbols.size());
     for (size_t i = 0; i < symbols.size(); ++i) {
       std::memset(&items[i], 0, sizeof(items[i]));
       items[i].market = symbols[i].first;
-      items[i].flag = am::SubscribeDataType::kSnapshot;
+      items[i].data_type = data_type;
+      items[i].category_type = category;
       std::strncpy(items[i].security_code, symbols[i].second.c_str(),
                    sizeof(items[i].security_code) - 1);
     }
@@ -169,7 +180,6 @@ void AmaQuoteSource::Stop() {
 
 void AmaQuoteSource::OnMDSnapshot(am::MDSnapshot* snapshots, uint32_t cnt) {
   if (snapshots == nullptr) return;
-  const std::string now_iso = std::to_string(snapshots[0].orig_time);
   {
     std::lock_guard<std::mutex> lk(mu_);
     for (uint32_t i = 0; i < cnt; ++i) {
@@ -196,7 +206,6 @@ void AmaQuoteSource::OnMDSnapshot(am::MDSnapshot* snapshots, uint32_t cnt) {
       info.ext_json = ext.str();
     }
   }
-  (void)now_iso;
   am::IAMDApi::FreeMemory(snapshots);
 }
 

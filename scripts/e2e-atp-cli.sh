@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 真实 ATP 仿真柜台菜单 CLI 联调（在 WSL2 中运行）
+# 券商联调环境 ATP 交易菜单 CLI 联调（在 WSL2 中运行）
 set -uo pipefail
 ROOT=/mnt/e/DevSpace/gitsync/tradeforge
 ATP_SDK=/home/wuxw/workspace/archforce_quantapi_demo/sdk/v2.7.1.2-gcc4.8.5

@@ -116,6 +116,7 @@ ATP 状态码（`atp_quant_constant.h:1772-1804`）→ 契约：
 | D-002 | 金证 kdvip | Topic 订阅制（`filter`=股东账号、`chDataSet='1'`）、无原生幂等键、价格字符串、无 OrderType/TIF、无资金持仓推送、状态码表缺失、秒级时间 | 网关维护 `client_order_id↔iOrderBsn/szOrderId` 映射；订阅内部消化；缺省 LIMIT/DAY；查询拼快照；原码/原值进 `ext_json`；码表待补 |
 | D-003 | 华锐 ATP | 登录即推（非订阅）、`cl_ord_no` 语义偏差（客户订单号而非交易所编号）、下单不含 `cl_ord_no`、成交并入主推、无独立 TIF、FPGA/软报盘双通道、双 SDK 版本消息结构差异、双中心/多通道推送 | 网关内部消化主推并按 `exec_id` 去重；`exchange_order_id` 取 `order_id`，`cl_ord_no` 进 `ext_json`；IOC/FOK 由 order_type 承担；通道/版本/重连参数进 `ext_json` |
 | D-004 | 华锐 AMA 行情 | 契约无行情 RPC / 无行情载荷；Price6 单位差 100 倍；市场码/停牌字段多位义；TCP/FPGA 字段差异；行情侧自动重连与补发 | 仅作 `QuerySecurityInfo` 旁路数据源，不进 `ReportEvent`；多余字段进 `ext_json`；`appl_seq_num` 与网关 seq 隔离 |
+| D-005 | 华锐 AMA 订阅权限 | 券商联调环境 `amatest` 账号**不支持按权限订阅** `SubscribeItem`，须用厂商 demo 的按品种订阅 `SubscribeCategoryItem`（`kSnapshot` + 股票/基金/债券/指数）；股票快照 `high_limited/low_limited` 为 0 | 实测后改用按品种订阅；快照仅覆盖状态/最新价/涨跌停（涨跌停为 0 时保留 ATP 值），tick/lot 取 ATP 基线；原值进 `ext_json` 的 `ama` 段 |
 
 ## 7. 骨架交付与构建约束
 
@@ -130,7 +131,7 @@ ATP 状态码（`atp_quant_constant.h:1772-1804`）→ 契约：
 
 1. 本机：`cmake -S gateways/cpp -B /tmp/tf-cpp-build && ctest` 全绿（纯核心，不碰 SDK）。
 2. Linux x86_64 构建机：打开 `BROKERGW_WITH_*`，用各 SDK 自带的 CMake/Makefile 确认头文件与库可链接（只编译，不连真实柜台）。
-3. 柜台仿真环境：用 `mock_adapter` → `bgw-probe` 先验证契约语义不变；再逐柜台联调 Topic 订阅 / 登录即推、字段映射与回报去重。
+3. 券商联调环境：用 `mock_adapter` → `bgw-probe` 先验证契约语义不变（本地 mock，非券商服务）；再逐柜台对接券商联调服务，验证 Topic 订阅 / 登录即推、字段映射与回报去重。
 4. 待材料/联调确认：金证 `ORDER_STATUS`/`STK_BIZ` 码表、ATP `cl_ord_no` 与 `order_id` 的实际取值关系、TIF/GTC 支持范围、纳秒级时间戳字段、AMA 组播/Topic 配置与 `trading_phase_code` 位义。
 
 **契约零改动**：以上全部通过 `ext_json`、网关内部映射与旁路数据源消化，不改 `api/proto/brokergateway/v1/brokergateway.proto`；若未来 `ext_json` 中某字段稳定复用，再走新版本 proto + buf breaking 检查。

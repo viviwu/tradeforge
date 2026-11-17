@@ -2,7 +2,7 @@
 
 TradeForge 是一个用 Go 编写的**模拟交易系统**，用于练习高并发、gRPC、事件驱动和交易系统设计。系统支持 CLI 高并发登录、下单、撤单、查询，以及订单/策略状态和行情的实时订阅，并提供 Web 管理端。
 
-> 当前状态：**P0–P4 主链路 MVP 已完成；M6 渠道对接（BrokerGateway v1）已完成、契约冻结；M7 真实券商 C++ 网关适配已在 WSL2 Linux 构建并通过 ATP 仿真柜台菜单 CLI 联调**。服务端、CLI、Go SDK、撮合/OMS、订阅、行情、Forge Console、Docker 部署与 Postgres 集成测试均已可运行；渠道侧通过模拟券商网关 `broker-stub` 与 `bgw-probe` 验证统一契约，真实柜台侧用 C++ 网关 + `bgw-cli` 验证。需求与技术方案见 [PR-TD.doc.md](./PR-TD.doc.md)，进度与决策见 [dev_ledger.md](./dev_ledger.md)。
+> 当前状态：**P0–P4 主链路 MVP 已完成；M6 渠道对接（BrokerGateway v1）已完成、契约冻结；M7 真实券商 C++ 网关适配已在 WSL2 Linux 构建并通过券商联调环境的 ATP 交易 + AMA 行情菜单 CLI 验证**。服务端、CLI、Go SDK、撮合/OMS、订阅、行情、Forge Console、Docker 部署与 Postgres 集成测试均已可运行；渠道侧通过模拟券商网关 `broker-stub` 与 `bgw-probe` 验证统一契约，真实柜台侧用 C++ 网关 + `bgw-cli` 验证。需求与技术方案见 [PR-TD.doc.md](./PR-TD.doc.md)，进度与决策见 [dev_ledger.md](./dev_ledger.md)。
 
 ## 命名体系
 
@@ -190,7 +190,7 @@ Go 1.26+ · gRPC + Protobuf · grpc-gateway · Cobra · PostgreSQL 17 · pgx · 
 | P3 | 模拟行情、行情订阅、Forge Console（已完成） |
 | P4 | 压测、限流、背压、对账、故障恢复（已完成；订单簿快照经评审决策不做） |
 | M6 | 渠道对接（已完成）：`broker-gateway.v1` 契约、broker-stub 网关、渠道视角 e2e、契约冻结 |
-| M7 | 真实券商 C++ 网关适配（进行中，仅现货：股票 / ETF / 可转债）：金证 kdvip / 华锐 ATP 交易 + 华锐 AMA 行情旁路；gRPC server 层与 ATP/AMA 适配器已落地，ATP 仿真柜台菜单 CLI 联调通过 |
+| M7 | 真实券商 C++ 网关适配（进行中，仅现货：股票 / ETF / 可转债）：金证 kdvip / 华锐 ATP 交易 + 华锐 AMA 行情旁路；gRPC server 层与 ATP/AMA 适配器已落地，券商联调环境 ATP 交易 + AMA 行情菜单 CLI 验证通过 |
 | M8 | P5 可选扩展（搁置）：拆分服务、NATS、L2 行情、策略沙箱 |
 
 ## 文档

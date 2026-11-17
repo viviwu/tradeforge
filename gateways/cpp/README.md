@@ -65,7 +65,7 @@ cmake -S gateways/cpp -B build/cpp-atp -DCMAKE_BUILD_TYPE=Release \
   -DBROKERGW_ATP_SDK=/home/wuxw/workspace/archforce_quantapi_demo/sdk/v2.7.1.2-gcc4.8.5
 cmake --build build/cpp-atp -j4
 
-# 仿真配置（key=value，真实值不入库）。ATP demo 中实测可用的仿真值：
+# 券商联调环境配置（key=value，真实值不入库）。ATP demo 中实测可用的连接值：
 #   locations=172.16.109.17:32001
 #   agw_user=user5 / agw_password=password5
 #   order_way=4 / client_feature_code=dev-0001

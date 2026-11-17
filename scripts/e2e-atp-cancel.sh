@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 真实 ATP 仿真柜台：挂一张不会立即成交的限价买单并撤单
+# 券商联调环境 ATP：挂单并撤单（受理 ack + 终态回报）
 set -uo pipefail
 ROOT=/mnt/e/DevSpace/gitsync/tradeforge
 ATP_SDK=/home/wuxw/workspace/archforce_quantapi_demo/sdk/v2.7.1.2-gcc4.8.5

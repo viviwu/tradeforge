@@ -56,7 +56,7 @@ class KdvipAdapter final : public ICounterAdapter, public CCliStkTradeSpi {
   void OnRtnOrderFill(CRspStkOrderFillField* field) override;
 
  private:
-  // TODO(Linux 仿真环境)：CCliStkTradeApi 实例、账号映射表、
+  // TODO(Linux 券商联调环境)：CCliStkTradeApi 实例、账号映射表、
   // iOrderBsn <-> client_order_id、szOrderId 反查、队列与生命周期。
   CounterEventSink* sink_ = nullptr;
 };

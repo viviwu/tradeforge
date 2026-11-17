@@ -139,6 +139,6 @@ CI（`.github/workflows/ci.yml`）的 go job 已把该链路作为独立 step �
 ## 10. 已知限制与演进
 
 - **不做的**：跨进程持久化 seq 补发、中央网关聚合、订单簿快照、拆分服务/NATS/L2 行情（M5/M8 决策）。
-- **M7 已启动**：`gateways/cpp/` 提供 C++ CMake 骨架、三个适配层接口与纯核心单测；真实柜台联调需 Linux x86_64 构建机与仿真环境（见 [docs/m7-cpp-gateway.md](./m7-cpp-gateway.md) 与台账 §3.3）。契约仍冻结，不新增行情 RPC。
+- **M7 已启动**：`gateways/cpp/` 提供 C++ CMake 骨架、三个适配层接口与纯核心单测；真实柜台联调需 Linux x86_64 构建机与券商联调环境（见 [docs/m7-cpp-gateway.md](./m7-cpp-gateway.md) 与台账 §3.3）。契约仍冻结，不新增行情 RPC。
 - **将来可选**：多账号映射、按券商扩展差异表、把 `ext_json` 中稳定复用的字段升级为契约字段（需新版本 proto 与 breaking 检查）。
 - **当前边界**：stub 的适配器是 Go 进程；换成 C++ 实现时只要满足本文契约与 seq 语义，渠道核心与 TradeForge server 均无需改动。

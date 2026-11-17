@@ -277,9 +277,9 @@ func (c *cli) security(ctx context.Context, in *bufio.Scanner) error {
 		return err
 	}
 	i := resp.GetInfo()
-	fmt.Printf("Security %s@%s: status=%s tick=%d lot=%d up=%d down=%d\n",
+	fmt.Printf("Security %s@%s: status=%s tick=%d lot=%d up=%d down=%d ext=%s\n",
 		i.GetSymbol(), i.GetMarket(), i.GetTradingStatus(), i.GetPriceTickU(),
-		i.GetLotSize(), i.GetLimitUpU(), i.GetLimitDownU())
+		i.GetLotSize(), i.GetLimitUpU(), i.GetLimitDownU(), i.GetExtJson())
 	return nil
 }
 

@@ -201,7 +201,7 @@ void AtpAdapter::Start() {
   props_->SetValue(aq::prop::kClientFeatureCode, Get(cfg, "client_feature_code").c_str());
   props_->SetValue(aq::prop::kCallbackResourceMode, aq::ATPCallbackResourceModeConst::kLowLatencyMode);
   props_->SetValue(aq::prop::kRetransmitMode, aq::ATPRetransmitModeConst::kQuickMode);
-  // The demo connects with encrypt mode; keep it as the default for仿真 parity.
+  // The demo connects with encrypt mode; keep it as the default for environment parity.
   props_->SetValue(aq::prop::kEncryptSchema, aq::ATPEncryptModeConst::kEncryptMode);
 
   const aq::ATPErrorCodeType rc = aq::ATPQuantAPI::Init(props_);
@@ -445,13 +445,6 @@ AccountSnapshot AtpAdapter::QueryAccount(const std::string& fund_account) {
 
 SecurityInfo AtpAdapter::QuerySecurityInfo(const std::string& market,
                                            const std::string& symbol) {
-#ifdef BROKERGW_WITH_AMA
-  // AMA 行情只作为 QuerySecurityInfo 旁路数据源，不进回报流。
-  if (quotes_ != nullptr) {
-    SecurityInfo cached = quotes_->Lookup(market, symbol);
-    if (cached.price_tick_u > 0) return cached;
-  }
-#endif
   const int64_t rid = NextRequestId();
   Register(rid);
   aq::ATPReqCashExtQuerySecurityInfoMsg* msg =
@@ -472,6 +465,26 @@ SecurityInfo AtpAdapter::QuerySecurityInfo(const std::string& market,
   AtpCallResult result = Wait(rid, 5000);
   result.security.market = market;
   result.security.symbol = symbol;
+
+#ifdef BROKERGW_WITH_AMA
+  // AMA 行情旁路：只作为 QuerySecurityInfo 数据源，不进回报流。
+  // ATP 提供 tick/lot 基线；AMA 收到真实快照时覆盖交易状态、涨跌停、参考价。
+  if (quotes_ != nullptr) {
+    SecurityInfo ama = quotes_->Lookup(market, symbol);
+    if (!ama.ext_json.empty()) {  // ext_json 带 orig_time 代表快照已到达
+      if (ama.trading_status != TradingStatus::kUnspecified) {
+        result.security.trading_status = ama.trading_status;
+      }
+      if (ama.limit_up_u > 0) result.security.limit_up_u = ama.limit_up_u;
+      if (ama.limit_down_u > 0) result.security.limit_down_u = ama.limit_down_u;
+      if (ama.price_tick_u > 0) result.security.price_tick_u = ama.price_tick_u;
+      if (ama.lot_size > 0) result.security.lot_size = ama.lot_size;
+      const std::string base = result.security.ext_json;
+      result.security.ext_json = "{\"ama\":" + ama.ext_json + ",\"atp\":" +
+                                 (base.empty() ? std::string("{}") : base) + "}";
+    }
+  }
+#endif
   return result.security;
 }
 
