@@ -65,8 +65,22 @@ cmake -S gateways/cpp -B build/cpp-atp -DCMAKE_BUILD_TYPE=Release \
   -DBROKERGW_ATP_SDK=/home/wuxw/workspace/archforce_quantapi_demo/sdk/v2.7.1.2-gcc4.8.5
 cmake --build build/cpp-atp -j4
 
-# 仿真配置（key=value，真实值不入库），参考 build/atp.conf.example
+# 仿真配置（key=value，真实值不入库）。ATP demo 中实测可用的仿真值：
+#   locations=172.16.109.17:32001
+#   agw_user=user5 / agw_password=password5
+#   order_way=4 / client_feature_code=dev-0001
+#   cust_id=10014939 / password=123123 / fund_account=10014939
+#   branch_id=2250 / account_id_sz=0117920347 / account_id_sh=A461951056
+#   ama_config=/path/to/ama.conf  （可选行情旁路）
 build/cpp-atp/brokergw_server --adapter atp --atp-config /path/to/atp.conf \
   --addr 0.0.0.0:50053
+
+# 菜单式客户端：1 attach → 2 sub → 7 account → 4 security → 8 submit → 9 cancel → 10 hb
+build/bgw-cli --addr 127.0.0.1:50053
+
+# AMA 行情旁路配置（ama.conf）：
+#   username=amatest / password=amatest
+#   ums_server_1=172.16.109.14:8200 / ums_server_2=172.16.109.15:8200
+#   symbols=SH:600000,SZ:000001
 ```
 
